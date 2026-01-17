@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SKU Wise Ad Spend Dashboard</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #102a43;
+      --muted: #627d98;
+      --primary: #1f4b99;
+      --accent: #ffb020;
+      --border: #e2e8f0;
+      --success: #1fbf75;
+      --danger: #e83e3e;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", "Segoe UI", Tahoma, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: linear-gradient(120deg, #142850, #1b3b8d, #1f4b99);
+      color: #fff;
+      padding: 28px 32px 32px;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    main {
+      padding: 24px 32px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(15, 38, 78, 0.08);
+      padding: 20px 24px;
+      border: 1px solid var(--border);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .filter-group select,
+    .filter-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+    }
+
+    .filter-actions {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-outline {
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card {
+      padding: 16px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+    }
+
+    .kpi-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .kpi-value {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .chart-card {
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #fff;
+      height: 100%;
+    }
+
+    .chart-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .table-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    tbody td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .pill.success { background: rgba(31, 191, 117, 0.15); color: var(--success); }
+    .pill.warning { background: rgba(255, 176, 32, 0.18); color: #b26a00; }
+    .pill.danger { background: rgba(232, 62, 62, 0.15); color: var(--danger); }
+
+    .pagination {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .pagination button {
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 720px) {
+      header {
+        padding: 20px 20px 24px;
+      }
+
+      main {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SKU Wise Ad Spend Dashboard</h1>
+    <p>Dataset: SKU WISE AD SPEND · Powered by selected highlighted columns (A, B, DV, DX, DZ, EE, EF, EI, EK, EM, EN, EO)</p>
+  </header>
+  <main>
+    <section class="panel">
+      <div class="filters">
+        <div class="filter-group">
+          <label for="categoryFilter">Category</label>
+          <select id="categoryFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="skuFilter">SKU</label>
+          <select id="skuFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="signalFilter">Signal 2025</label>
+          <select id="signalFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="actionFilter">Action 2025</label>
+          <select id="actionFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="searchInput">Search SKU</label>
+          <input id="searchInput" type="search" placeholder="Search keyword" />
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" id="applyFilters">Apply</button>
+          <button class="btn btn-outline" id="resetFilters">Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">DEC-25 Revenue</div>
+          <div class="kpi-value" id="kpiRevenue">-</div>
+          <div class="kpi-sub" id="kpiRevenueRows">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">DEC-25 Ad Spend</div>
+          <div class="kpi-value" id="kpiSpend">-</div>
+          <div class="kpi-sub" id="kpiSpendShare">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Spend % of Revenue</div>
+          <div class="kpi-value" id="kpiShare">-</div>
+          <div class="kpi-sub">Weighted by revenue</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Revenue 2025</div>
+          <div class="kpi-value" id="kpiRevenue2025">-</div>
+          <div class="kpi-sub" id="kpiRevenue2025Rows">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Ad Spend 2025</div>
+          <div class="kpi-value" id="kpiSpend2025">-</div>
+          <div class="kpi-sub" id="kpiSpend2025Share">-</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Top SKUs by Dec-25 Revenue</h3>
+          <canvas id="revenueChart" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Dec-25 vs 2025 Ad Spend</h3>
+          <canvas id="spendChart" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Spend % Distribution</h3>
+          <canvas id="shareChart" height="220"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="table-actions">
+        <div>
+          <strong>SKU Detail Table</strong>
+          <div class="muted" id="rowCount">0 rows</div>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-outline" id="downloadCsv">Download CSV</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr id="tableHead"></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      rows: [],
+      filtered: [],
+      headers: [],
+      currentPage: 1,
+      pageSize: 15,
+      sortKey: null,
+      sortDir: 'desc'
+    };
+
+    const formatCurrency = (value) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+      return value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    };
+
+    const formatPercent = (value) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+      return `${value.toFixed(2)}%`;
+    };
+
+    const safeNumber = (value) => (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
+
+    const buildOptions = (select, values) => {
+      select.innerHTML = '';
+      const allOption = document.createElement('option');
+      allOption.value = '';
+      allOption.textContent = 'All';
+      select.appendChild(allOption);
+      values.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    };
+
+    const loadData = async () => {
+      const response = await fetch('data.json');
+      const payload = await response.json();
+      state.headers = Object.values(payload.headers);
+      state.rows = payload.rows;
+      initializeFilters();
+      applyFilters();
+    };
+
+    const initializeFilters = () => {
+      const categories = Array.from(new Set(state.rows.map((row) => row['CAT']).filter(Boolean))).sort();
+      const skus = Array.from(new Set(state.rows.map((row) => row['SKU PLAIN']).filter(Boolean))).sort();
+      const signals = Array.from(new Set(state.rows.map((row) => row['Signal 2025']).filter(Boolean))).sort();
+      const actions = Array.from(new Set(state.rows.map((row) => row['Action 2025']).filter(Boolean))).sort();
+
+      buildOptions(document.getElementById('categoryFilter'), categories);
+      buildOptions(document.getElementById('skuFilter'), skus);
+      buildOptions(document.getElementById('signalFilter'), signals);
+      buildOptions(document.getElementById('actionFilter'), actions);
+    };
+
+    const applyFilters = () => {
+      const category = document.getElementById('categoryFilter').value;
+      const sku = document.getElementById('skuFilter').value;
+      const signal = document.getElementById('signalFilter').value;
+      const action = document.getElementById('actionFilter').value;
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+
+      state.filtered = state.rows.filter((row) => {
+        if (category && row['CAT'] !== category) return false;
+        if (sku && row['SKU PLAIN'] !== sku) return false;
+        if (signal && row['Signal 2025'] !== signal) return false;
+        if (action && row['Action 2025'] !== action) return false;
+        if (search && !String(row['SKU PLAIN']).toLowerCase().includes(search)) return false;
+        return true;
+      });
+
+      if (state.sortKey) {
+        sortRows(state.sortKey, state.sortDir, false);
+      }
+
+      state.currentPage = 1;
+      updateKPIs();
+      updateCharts();
+      renderTable();
+    };
+
+    const resetFilters = () => {
+      document.getElementById('categoryFilter').value = '';
+      document.getElementById('skuFilter').value = '';
+      document.getElementById('signalFilter').value = '';
+      document.getElementById('actionFilter').value = '';
+      document.getElementById('searchInput').value = '';
+      applyFilters();
+    };
+
+    const updateKPIs = () => {
+      const revenue = state.filtered.reduce((acc, row) => acc + safeNumber(row['DEC-25 REVENUE']), 0);
+      const spend = state.filtered.reduce((acc, row) => acc + safeNumber(row['DEC-25 ADVT SPEND']), 0);
+      const revenue2025 = state.filtered.reduce((acc, row) => acc + safeNumber(row['REVENUE 2025']), 0);
+      const spend2025 = state.filtered.reduce((acc, row) => acc + safeNumber(row['ADVT SPEND 2025']), 0);
+
+      const weightedShare = revenue ? (spend / revenue) * 100 : 0;
+      const spendShare2025 = revenue2025 ? (spend2025 / revenue2025) * 100 : 0;
+
+      document.getElementById('kpiRevenue').textContent = formatCurrency(revenue);
+      document.getElementById('kpiRevenueRows').textContent = `${state.filtered.length} SKUs`;
+      document.getElementById('kpiSpend').textContent = formatCurrency(spend);
+      document.getElementById('kpiSpendShare').textContent = `${formatPercent(weightedShare)} of revenue`;
+      document.getElementById('kpiShare').textContent = formatPercent(weightedShare);
+      document.getElementById('kpiRevenue2025').textContent = formatCurrency(revenue2025);
+      document.getElementById('kpiRevenue2025Rows').textContent = `${state.filtered.length} SKUs`;
+      document.getElementById('kpiSpend2025').textContent = formatCurrency(spend2025);
+      document.getElementById('kpiSpend2025Share').textContent = `${formatPercent(spendShare2025)} of revenue`;
+    };
+
+    let revenueChart;
+    let spendChart;
+    let shareChart;
+
+    const updateCharts = () => {
+      const top = [...state.filtered]
+        .filter((row) => row['SKU PLAIN'])
+        .sort((a, b) => safeNumber(b['DEC-25 REVENUE']) - safeNumber(a['DEC-25 REVENUE']))
+        .slice(0, 8);
+
+      const labels = top.map((row) => row['SKU PLAIN']);
+      const revenueData = top.map((row) => safeNumber(row['DEC-25 REVENUE']));
+
+      if (revenueChart) revenueChart.destroy();
+      revenueChart = new Chart(document.getElementById('revenueChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'DEC-25 Revenue',
+            data: revenueData,
+            backgroundColor: '#1f4b99'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { ticks: { callback: (value) => value.toLocaleString('en-IN') } }
+          }
+        }
+      });
+
+      const spendPoints = top.map((row) => safeNumber(row['DEC-25 ADVT SPEND']));
+      const spend2025Points = top.map((row) => safeNumber(row['ADVT SPEND 2025']));
+
+      if (spendChart) spendChart.destroy();
+      spendChart = new Chart(document.getElementById('spendChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Dec-25 Spend',
+              data: spendPoints,
+              borderColor: '#ffb020',
+              backgroundColor: 'rgba(255,176,32,0.25)'
+            },
+            {
+              label: '2025 Spend',
+              data: spend2025Points,
+              borderColor: '#1f4b99',
+              backgroundColor: 'rgba(31,75,153,0.15)'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: { ticks: { callback: (value) => value.toLocaleString('en-IN') } }
+          }
+        }
+      });
+
+      const shareBuckets = {
+        '<10%': 0,
+        '10-20%': 0,
+        '20-30%': 0,
+        '30-40%': 0,
+        '40%+': 0
+      };
+
+      state.filtered.forEach((row) => {
+        const share = safeNumber(row['% of Revenue (Spend)']);
+        if (share < 10) shareBuckets['<10%'] += 1;
+        else if (share < 20) shareBuckets['10-20%'] += 1;
+        else if (share < 30) shareBuckets['20-30%'] += 1;
+        else if (share < 40) shareBuckets['30-40%'] += 1;
+        else shareBuckets['40%+'] += 1;
+      });
+
+      if (shareChart) shareChart.destroy();
+      shareChart = new Chart(document.getElementById('shareChart'), {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(shareBuckets),
+          datasets: [{
+            data: Object.values(shareBuckets),
+            backgroundColor: ['#1f4b99', '#2f6ad9', '#4f8bff', '#ffb020', '#f97316']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+    };
+
+    const renderTable = () => {
+      const tableHead = document.getElementById('tableHead');
+      const tableBody = document.getElementById('tableBody');
+      const start = (state.currentPage - 1) * state.pageSize;
+      const pageRows = state.filtered.slice(start, start + state.pageSize);
+      const columns = [
+        'CAT',
+        'SKU PLAIN',
+        'DEC-25 REVENUE',
+        'DEC-25 ADVT SPEND',
+        '% of Revenue (Spend)',
+        'Signal(AMZ)',
+        'Action(AMZ)',
+        'REVENUE 2025',
+        'ADVT SPEND 2025',
+        '% of Revenue 2025',
+        'Signal 2025',
+        'Action 2025'
+      ];
+
+      tableHead.innerHTML = '';
+      columns.forEach((key) => {
+        const th = document.createElement('th');
+        th.textContent = key;
+        th.addEventListener('click', () => sortRows(key));
+        tableHead.appendChild(th);
+      });
+
+      tableBody.innerHTML = '';
+      pageRows.forEach((row) => {
+        const tr = document.createElement('tr');
+        columns.forEach((key) => {
+          const td = document.createElement('td');
+          if (key.includes('Signal')) {
+            const pill = document.createElement('span');
+            const value = row[key] || '-';
+            pill.textContent = value;
+            pill.className = `pill ${value === 'Signal(TOTAL)' ? 'success' : value === 'NA' ? 'warning' : 'danger'}`;
+            td.appendChild(pill);
+          } else if (key.includes('Action')) {
+            const pill = document.createElement('span');
+            const value = row[key] || '-';
+            pill.textContent = value;
+            pill.className = 'pill warning';
+            td.appendChild(pill);
+          } else if (typeof row[key] === 'number') {
+            if (key.includes('%')) {
+              td.textContent = formatPercent(row[key]);
+            } else {
+              td.textContent = formatCurrency(row[key]);
+            }
+          } else {
+            td.textContent = row[key] || '-';
+          }
+          tr.appendChild(td);
+        });
+        tableBody.appendChild(tr);
+      });
+
+      document.getElementById('rowCount').textContent = `${state.filtered.length} rows`;
+      renderPagination();
+    };
+
+    const sortRows = (key, dir = null, update = true) => {
+      state.sortKey = key;
+      if (dir) {
+        state.sortDir = dir;
+      } else {
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      }
+      const direction = state.sortDir === 'asc' ? 1 : -1;
+      state.filtered.sort((a, b) => {
+        const aVal = a[key];
+        const bVal = b[key];
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return (aVal - bVal) * direction;
+        }
+        return String(aVal || '').localeCompare(String(bVal || '')) * direction;
+      });
+      if (update) {
+        renderTable();
+      }
+    };
+
+    const renderPagination = () => {
+      const pagination = document.getElementById('pagination');
+      const totalPages = Math.ceil(state.filtered.length / state.pageSize);
+      pagination.innerHTML = '';
+      const info = document.createElement('span');
+      info.className = 'muted';
+      info.textContent = `Page ${state.currentPage} of ${totalPages || 1}`;
+      pagination.appendChild(info);
+      if (totalPages <= 1) return;
+
+      const prev = document.createElement('button');
+      prev.textContent = 'Previous';
+      prev.disabled = state.currentPage === 1;
+      prev.addEventListener('click', () => {
+        state.currentPage -= 1;
+        renderTable();
+      });
+      pagination.appendChild(prev);
+
+      const next = document.createElement('button');
+      next.textContent = 'Next';
+      next.disabled = state.currentPage === totalPages;
+      next.addEventListener('click', () => {
+        state.currentPage += 1;
+        renderTable();
+      });
+      pagination.appendChild(next);
+    };
+
+    const downloadCsv = () => {
+      const headers = [
+        'CAT',
+        'SKU PLAIN',
+        'DEC-25 REVENUE',
+        'DEC-25 ADVT SPEND',
+        '% of Revenue (Spend)',
+        'Signal(AMZ)',
+        'Action(AMZ)',
+        'REVENUE 2025',
+        'ADVT SPEND 2025',
+        '% of Revenue 2025',
+        'Signal 2025',
+        'Action 2025'
+      ];
+      const lines = [headers.join(',')];
+      state.filtered.forEach((row) => {
+        const line = headers.map((header) => {
+          const value = row[header] ?? '';
+          return `"${String(value).replace(/"/g, '""')}"`;
+        });
+        lines.push(line.join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'sku-wise-ad-spend.csv';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    };
+
+    document.getElementById('applyFilters').addEventListener('click', applyFilters);
+    document.getElementById('resetFilters').addEventListener('click', resetFilters);
+    document.getElementById('downloadCsv').addEventListener('click', downloadCsv);
+
+    loadData();
+  </script>
+</body>
+</html>
