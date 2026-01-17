@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SKU Wise Ad Spend Dashboard</title>
+  <link rel="preconnect" href="https://cdn.plot.ly" />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: #f4f6fb;
+      color: #1f2a44;
+    }
+    body {
+      margin: 0;
+      padding: 32px 24px 48px;
+    }
+    header {
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      color: #5f6b85;
+      margin: 0;
+      max-width: 720px;
+    }
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+    .kpi-grid {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      margin: 24px 0;
+    }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    }
+    .kpi-label {
+      font-size: 0.85rem;
+      color: #5f6b85;
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 12px;
+    }
+    .charts {
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .filter-chip {
+      background: #e8ecf5;
+      color: #3b4861;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+    }
+    .status {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: #6b7280;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf0f5;
+      text-align: left;
+    }
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #475569;
+      position: sticky;
+      top: 0;
+    }
+    .table-wrapper {
+      max-height: 420px;
+      overflow: auto;
+      border-radius: 12px;
+      border: 1px solid #eef2f7;
+    }
+    .error {
+      color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SKU Wise Ad Spend Dashboard</h1>
+    <p class="subtitle">
+      Snapshot of SKU Wise advertising performance. This dashboard mirrors the look-and-feel of the other
+      repository dashboards and pulls live metrics from the shared dataset.
+    </p>
+    <div class="filters">
+      <div class="filter-chip">Auto-detected columns</div>
+      <div class="filter-chip">Live metrics</div>
+      <div class="filter-chip">Top 200 rows preview</div>
+    </div>
+    <div id="status" class="status">Loading data from the dataset…</div>
+  </header>
+
+  <section class="grid kpi-grid">
+    <div class="card">
+      <div class="kpi-label">Total Spend</div>
+      <div class="kpi-value" id="kpi-spend">—</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">Total Sales</div>
+      <div class="kpi-value" id="kpi-sales">—</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">Total Orders</div>
+      <div class="kpi-value" id="kpi-orders">—</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">ROAS</div>
+      <div class="kpi-value" id="kpi-roas">—</div>
+    </div>
+  </section>
+
+  <section class="grid charts">
+    <div class="card">
+      <div class="section-title">Performance Trend</div>
+      <div id="trend-chart" style="height: 320px;"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Spend vs Sales</div>
+      <div id="scatter-chart" style="height: 320px;"></div>
+    </div>
+  </section>
+
+  <section style="margin-top: 24px;">
+    <div class="section-title">Detailed Table</div>
+    <div class="card table-wrapper">
+      <table>
+        <thead id="table-head"></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-4HVX7s+hz/qQ+KZQlw4Dxo6B3yG+IpMdYHyuqSLM2OZqP/gRWsHDwK1Ycf6VBtXG8ED0Ib2VfpkKOLHcZ8CxXg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <script>
+    const statusEl = document.getElementById("status");
+    const kpiSpend = document.getElementById("kpi-spend");
+    const kpiSales = document.getElementById("kpi-sales");
+    const kpiOrders = document.getElementById("kpi-orders");
+    const kpiRoas = document.getElementById("kpi-roas");
+    const tableHead = document.getElementById("table-head");
+    const tableBody = document.getElementById("table-body");
+
+    const dataUrl = "data/SKU_WISE_AD_SPEND.xlsx";
+
+    const formatMetric = (value) => {
+      if (value === null || value === undefined || Number.isNaN(value)) {
+        return "N/A";
+      }
+      const absValue = Math.abs(value);
+      if (absValue >= 1_000_000) {
+        return `${(value / 1_000_000).toFixed(2)}M`;
+      }
+      if (absValue >= 1_000) {
+        return `${(value / 1_000).toFixed(2)}K`;
+      }
+      return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    };
+
+    const findColumn = (headers, keywords) =>
+      headers.find((header) => keywords.some((keyword) => header.toLowerCase().includes(keyword)));
+
+    const parseExcelDate = (value) => {
+      if (value instanceof Date) {
+        return value;
+      }
+      if (typeof value === "number") {
+        const dateCode = XLSX.SSF.parse_date_code(value);
+        if (!dateCode) {
+          return null;
+        }
+        return new Date(Date.UTC(dateCode.y, dateCode.m - 1, dateCode.d));
+      }
+      if (typeof value === "string") {
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      }
+      return null;
+    };
+
+    const normalizeNumber = (value) => {
+      if (typeof value === "number") {
+        return value;
+      }
+      if (typeof value === "string") {
+        const cleaned = value.replace(/[$,%]/g, "");
+        const parsed = Number(cleaned);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return null;
+    };
+
+    const updateTable = (rows, headers) => {
+      tableHead.innerHTML = "";
+      tableBody.innerHTML = "";
+
+      const headRow = document.createElement("tr");
+      headers.forEach((header) => {
+        const th = document.createElement("th");
+        th.textContent = header;
+        headRow.appendChild(th);
+      });
+      tableHead.appendChild(headRow);
+
+      rows.forEach((row) => {
+        const tr = document.createElement("tr");
+        headers.forEach((header) => {
+          const td = document.createElement("td");
+          const cellValue = row[header];
+          td.textContent = cellValue === null || cellValue === undefined ? "" : cellValue;
+          tr.appendChild(td);
+        });
+        tableBody.appendChild(tr);
+      });
+    };
+
+    const renderCharts = ({ trendDates, trendValues, scatterX, scatterY }) => {
+      const trendLayout = {
+        margin: { l: 50, r: 24, t: 24, b: 40 },
+        xaxis: { title: "Date" },
+        yaxis: { title: "Spend" },
+      };
+      Plotly.newPlot(
+        "trend-chart",
+        [
+          {
+            x: trendDates,
+            y: trendValues,
+            mode: "lines+markers",
+            line: { color: "#2563eb" },
+            marker: { size: 6 },
+          },
+        ],
+        trendLayout,
+        { displayModeBar: false }
+      );
+
+      const scatterLayout = {
+        margin: { l: 50, r: 24, t: 24, b: 40 },
+        xaxis: { title: "Spend" },
+        yaxis: { title: "Sales" },
+      };
+      Plotly.newPlot(
+        "scatter-chart",
+        [
+          {
+            x: scatterX,
+            y: scatterY,
+            mode: "markers",
+            marker: { size: 8, color: "#f97316", opacity: 0.75 },
+          },
+        ],
+        scatterLayout,
+        { displayModeBar: false }
+      );
+    };
+
+    fetch(dataUrl)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load dataset (${response.status}).`);
+        }
+        return response.arrayBuffer();
+      })
+      .then((buffer) => {
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
+
+        if (!rows.length) {
+          statusEl.textContent = "Dataset is empty.";
+          return;
+        }
+
+        const headers = Object.keys(rows[0]);
+        const spendCol = findColumn(headers, ["spend", "cost"]);
+        const salesCol = findColumn(headers, ["sales", "revenue"]);
+        const ordersCol = findColumn(headers, ["order", "purchase"]);
+        const dateCol = findColumn(headers, ["date"]);
+
+        const totals = rows.reduce(
+          (acc, row) => {
+            acc.spend += normalizeNumber(row[spendCol]) || 0;
+            acc.sales += normalizeNumber(row[salesCol]) || 0;
+            acc.orders += normalizeNumber(row[ordersCol]) || 0;
+            return acc;
+          },
+          { spend: 0, sales: 0, orders: 0 }
+        );
+
+        const roas = totals.spend ? totals.sales / totals.spend : null;
+        kpiSpend.textContent = formatMetric(totals.spend);
+        kpiSales.textContent = formatMetric(totals.sales);
+        kpiOrders.textContent = formatMetric(totals.orders);
+        kpiRoas.textContent = roas === null ? "N/A" : roas.toFixed(2);
+
+        const trendMap = new Map();
+        const scatterX = [];
+        const scatterY = [];
+        rows.forEach((row) => {
+          const spend = normalizeNumber(row[spendCol]);
+          const sales = normalizeNumber(row[salesCol]);
+          if (spend !== null && sales !== null) {
+            scatterX.push(spend);
+            scatterY.push(sales);
+          }
+          if (dateCol && spend !== null) {
+            const parsedDate = parseExcelDate(row[dateCol]);
+            if (parsedDate) {
+              const key = parsedDate.toISOString().split("T")[0];
+              trendMap.set(key, (trendMap.get(key) || 0) + spend);
+            }
+          }
+        });
+
+        const trendDates = Array.from(trendMap.keys()).sort();
+        const trendValues = trendDates.map((date) => trendMap.get(date));
+
+        renderCharts({ trendDates, trendValues, scatterX, scatterY });
+
+        updateTable(rows.slice(0, 200), headers);
+        statusEl.textContent = `Loaded ${rows.length.toLocaleString()} rows from ${workbook.SheetNames[0]}.`;
+      })
+      .catch((error) => {
+        statusEl.innerHTML = `<span class="error">${error.message}</span>`;
+      });
+  </script>
+</body>
+</html>
