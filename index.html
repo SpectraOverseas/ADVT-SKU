@@ -18,6 +18,8 @@
       --border: #e2e8f0;
       --success: #1fbf75;
       --danger: #e83e3e;
+      --table-hover-row: #edf2fb;
+      --table-hover-col: #e6edf7;
     }
 
     * {
@@ -211,8 +213,13 @@
       font-size: 13px;
     }
 
-    tbody tr:hover {
-      background: #f8fafc;
+    tbody tr:hover td {
+      background: var(--table-hover-row);
+    }
+
+    thead th.col-hover,
+    tbody td.col-hover {
+      background: var(--table-hover-col);
     }
 
     .pill {
@@ -382,7 +389,7 @@
       </div>
       <div id="tableContent">
         <div style="overflow-x:auto;">
-          <table>
+          <table id="skuTable">
             <thead>
               <tr id="tableHead"></tr>
             </thead>
@@ -709,9 +716,10 @@
       ];
 
       tableHead.innerHTML = '';
-      columns.forEach((key) => {
+      columns.forEach((key, index) => {
         const th = document.createElement('th');
         th.textContent = key;
+        th.dataset.colIndex = String(index);
         th.addEventListener('click', () => sortRows(key));
         tableHead.appendChild(th);
       });
@@ -719,8 +727,9 @@
       tableBody.innerHTML = '';
       pageRows.forEach((row) => {
         const tr = document.createElement('tr');
-        columns.forEach((key) => {
+        columns.forEach((key, index) => {
           const td = document.createElement('td');
+          td.dataset.colIndex = String(index);
           if (key.includes('Signal')) {
             const pill = document.createElement('span');
             const value = row[key] || '-';
@@ -844,8 +853,39 @@
       renderTable();
     });
     const viewToggle = document.getElementById('viewToggle');
+    const skuTable = document.getElementById('skuTable');
     const chartSection = document.getElementById('chartSection');
     const tableContent = document.getElementById('tableContent');
+    let activeColumn = null;
+
+    const clearColumnHover = () => {
+      if (activeColumn === null) return;
+      skuTable.querySelectorAll(`[data-col-index="${activeColumn}"]`).forEach((cell) => {
+        cell.classList.remove('col-hover');
+      });
+      activeColumn = null;
+    };
+
+    const setColumnHover = (colIndex) => {
+      if (activeColumn === colIndex) return;
+      clearColumnHover();
+      activeColumn = colIndex;
+      skuTable.querySelectorAll(`[data-col-index="${colIndex}"]`).forEach((cell) => {
+        cell.classList.add('col-hover');
+      });
+    };
+
+    skuTable.addEventListener('mouseover', (event) => {
+      const cell = event.target.closest('th, td');
+      if (!cell || !skuTable.contains(cell)) return;
+      const { colIndex } = cell.dataset;
+      if (colIndex === undefined) return;
+      setColumnHover(colIndex);
+    });
+
+    skuTable.addEventListener('mouseleave', () => {
+      clearColumnHover();
+    });
 
     const setView = (view) => {
       const isTableView = view === 'table';
