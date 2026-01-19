@@ -494,8 +494,6 @@
       });
     };
 
-    const normalizeSku = (value) => String(value || '').trim().toUpperCase();
-
     const loadStockSheet = async () => {
       const fetchWithFallback = async () => {
         for (const file of STOCK_SHEET_FILES) {
@@ -533,7 +531,7 @@
 
       const map = new Map();
       rows.slice(1).forEach((row) => {
-        const sku = normalizeSku(row[skuIndex]);
+        const sku = String(row[skuIndex] || '').trim();
         if (!sku) return;
         const lo1 = String(row[lo1Index] || '').trim();
         map.set(sku, lo1 || null);
@@ -547,14 +545,10 @@
         loadStockSheet()
       ]);
       state.headers = Object.values(dataResponse.headers);
-      state.rows = dataResponse.rows.map((row) => {
-        const sku = row['SKU PLAIN'] ?? row['SKU'];
-        const skuKey = normalizeSku(sku);
-        return {
-          ...row,
-          'LO-1': lo1Map.get(skuKey) || null
-        };
-      });
+      state.rows = dataResponse.rows.map((row) => ({
+        ...row,
+        'LO-1': lo1Map.get(String(row['SKU PLAIN'] || '').trim()) || null
+      }));
       initializeFilters();
       applyFilters();
     };
