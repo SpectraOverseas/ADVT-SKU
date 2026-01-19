@@ -416,9 +416,19 @@
       return value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
     };
 
+    const formatKpiCurrency = (value) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+      return value.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    };
+
     const formatPercent = (value) => {
       if (typeof value !== 'number' || Number.isNaN(value)) return '-';
       return `${value.toFixed(2)}%`;
+    };
+
+    const formatKpiPercent = (value) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+      return `${value.toFixed(0)}%`;
     };
 
     const safeNumber = (value) => (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
@@ -538,14 +548,14 @@
       const weightedShare = revenue ? (spend / revenue) * 100 : 0;
       const spendShare2025 = revenue2025 ? (spend2025 / revenue2025) * 100 : 0;
 
-      document.getElementById('kpiRevenue').textContent = formatCurrency(revenue);
+      document.getElementById('kpiRevenue').textContent = formatKpiCurrency(revenue);
       document.getElementById('kpiRevenueRows').textContent = `${state.filtered.length} SKUs`;
-      document.getElementById('kpiSpend').textContent = formatCurrency(spend);
+      document.getElementById('kpiSpend').textContent = formatKpiCurrency(spend);
       document.getElementById('kpiSpendShare').textContent = `${formatPercent(weightedShare)} of revenue`;
-      document.getElementById('kpiShare').textContent = formatPercent(weightedShare);
-      document.getElementById('kpiRevenue2025').textContent = formatCurrency(revenue2025);
+      document.getElementById('kpiShare').textContent = formatKpiPercent(weightedShare);
+      document.getElementById('kpiRevenue2025').textContent = formatKpiCurrency(revenue2025);
       document.getElementById('kpiRevenue2025Rows').textContent = `${state.filtered.length} SKUs`;
-      document.getElementById('kpiSpend2025').textContent = formatCurrency(spend2025);
+      document.getElementById('kpiSpend2025').textContent = formatKpiCurrency(spend2025);
       document.getElementById('kpiSpend2025Share').textContent = `${formatPercent(spendShare2025)} of revenue`;
     };
 
