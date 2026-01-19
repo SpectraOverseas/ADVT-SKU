@@ -227,6 +227,14 @@
     .pill.success { background: rgba(31, 191, 117, 0.15); color: var(--success); }
     .pill.warning { background: rgba(255, 176, 32, 0.18); color: #b26a00; }
     .pill.danger { background: rgba(232, 62, 62, 0.15); color: var(--danger); }
+    .pill.signal-very-good { background: #28a745; color: #fff; }
+    .pill.signal-good { background: #7cd88d; color: #0b3d1f; }
+    .pill.signal-only-spent { background: #5bc0de; color: #0b3d4d; }
+    .pill.signal-not-spent { background: #6c757d; color: #fff; }
+    .pill.signal-risky { background: #ffc107; color: #4a3b00; }
+    .pill.signal-high-risk { background: #fd7e14; color: #4a1e00; }
+    .pill.signal-very-risky { background: #dc3545; color: #fff; }
+    .pill.signal-unknown { background: #e2e8f0; color: var(--text); }
 
     .pagination {
       display: flex;
@@ -401,10 +409,26 @@
 
     const safeNumber = (value) => (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
 
-    const getRevenueSharePillClass = (value) => {
-      if (value >= 0.04) return 'danger';
-      if (value >= 0.02) return 'warning';
-      return 'success';
+    const getSignalPillClass = (value) => {
+      if (!value) return 'signal-unknown';
+      switch (String(value).trim().toLowerCase()) {
+        case 'very good':
+          return 'signal-very-good';
+        case 'good':
+          return 'signal-good';
+        case 'only spent':
+          return 'signal-only-spent';
+        case 'not spent':
+          return 'signal-not-spent';
+        case 'risky':
+          return 'signal-risky';
+        case 'high risk':
+          return 'signal-high-risk';
+        case 'very risky':
+          return 'signal-very-risky';
+        default:
+          return 'signal-unknown';
+      }
     };
 
     const buildOptions = (select, values) => {
@@ -651,15 +675,13 @@
       tableBody.innerHTML = '';
       pageRows.forEach((row) => {
         const tr = document.createElement('tr');
-        const revenueShare2025 = safeNumber(row['% of Revenue 2025']);
-        const revenueShareClass = getRevenueSharePillClass(revenueShare2025);
         columns.forEach((key) => {
           const td = document.createElement('td');
           if (key.includes('Signal')) {
             const pill = document.createElement('span');
             const value = row[key] || '-';
             pill.textContent = value;
-            pill.className = `pill ${revenueShareClass}`;
+            pill.className = `pill ${getSignalPillClass(value)}`;
             td.appendChild(pill);
           } else if (key.includes('Action')) {
             const pill = document.createElement('span');
