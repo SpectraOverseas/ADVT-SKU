@@ -807,7 +807,7 @@
             pill.className = `pill ${getActionPillClass(value)}`;
             td.appendChild(pill);
           } else if (key === 'LO-1') {
-            td.textContent = row[key] ? row[key] : 'NULL';
+            td.textContent = row[key] || '-';
           } else if (typeof row[key] === 'number') {
             if (key.includes('%')) {
               td.textContent = formatPercent(row[key]);
