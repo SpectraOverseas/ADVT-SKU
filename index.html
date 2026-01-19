@@ -378,6 +378,12 @@
 
     const safeNumber = (value) => (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
 
+    const getRevenueSharePillClass = (value) => {
+      if (value >= 0.04) return 'danger';
+      if (value >= 0.02) return 'warning';
+      return 'success';
+    };
+
     const buildOptions = (select, values) => {
       select.innerHTML = '';
       const allOption = document.createElement('option');
@@ -598,13 +604,15 @@
       tableBody.innerHTML = '';
       pageRows.forEach((row) => {
         const tr = document.createElement('tr');
+        const revenueShare2025 = safeNumber(row['% of Revenue 2025']);
+        const revenueShareClass = getRevenueSharePillClass(revenueShare2025);
         columns.forEach((key) => {
           const td = document.createElement('td');
           if (key.includes('Signal')) {
             const pill = document.createElement('span');
             const value = row[key] || '-';
             pill.textContent = value;
-            pill.className = `pill ${value === 'Signal(TOTAL)' ? 'success' : value === 'NA' ? 'warning' : 'danger'}`;
+            pill.className = `pill ${revenueShareClass}`;
             td.appendChild(pill);
           } else if (key.includes('Action')) {
             const pill = document.createElement('span');
