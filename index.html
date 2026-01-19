@@ -277,7 +277,6 @@
           <input id="searchInput" type="search" placeholder="Search SKU" />
         </div>
         <div class="filter-actions">
-          <button class="btn btn-primary" id="applyFilters">Apply</button>
           <button class="btn btn-outline" id="resetFilters">Reset</button>
         </div>
       </div>
@@ -719,7 +718,11 @@
       URL.revokeObjectURL(link.href);
     };
 
-    document.getElementById('applyFilters').addEventListener('click', applyFilters);
+    document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+    document.getElementById('skuFilter').addEventListener('change', applyFilters);
+    document.getElementById('signalFilter').addEventListener('change', applyFilters);
+    document.getElementById('actionFilter').addEventListener('change', applyFilters);
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
     document.getElementById('resetFilters').addEventListener('click', resetFilters);
     document.getElementById('downloadCsv').addEventListener('click', downloadCsv);
     const viewToggle = document.getElementById('viewToggle');
