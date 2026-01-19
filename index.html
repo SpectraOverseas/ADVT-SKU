@@ -228,6 +228,18 @@
     .pill.warning { background: rgba(255, 176, 32, 0.18); color: #b26a00; }
     .pill.danger { background: rgba(232, 62, 62, 0.15); color: var(--danger); }
 
+    .signal-pill {
+      color: #fff;
+    }
+
+    .signal-very-good { background: #28a745; }
+    .signal-good { background: #7cd88d; color: #0f3d1f; }
+    .signal-only-spent { background: #5bc0de; }
+    .signal-not-spent { background: #6c757d; }
+    .signal-risky { background: #ffc107; color: #5c4500; }
+    .signal-high-risk { background: #fd7e14; }
+    .signal-very-risky { background: #dc3545; }
+
     .pagination {
       display: flex;
       gap: 8px;
@@ -401,10 +413,18 @@
 
     const safeNumber = (value) => (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
 
-    const getRevenueSharePillClass = (value) => {
-      if (value >= 0.04) return 'danger';
-      if (value >= 0.02) return 'warning';
-      return 'success';
+    const getSignalClass = (value) => {
+      const normalized = String(value || '').trim().toLowerCase();
+      const map = {
+        'very good': 'signal-very-good',
+        'good': 'signal-good',
+        'only spent': 'signal-only-spent',
+        'not spent': 'signal-not-spent',
+        'risky': 'signal-risky',
+        'high risk': 'signal-high-risk',
+        'very risky': 'signal-very-risky'
+      };
+      return map[normalized] || '';
     };
 
     const buildOptions = (select, values) => {
@@ -655,18 +675,14 @@
       tableBody.innerHTML = '';
       pageRows.forEach((row) => {
         const tr = document.createElement('tr');
-        const revenueShare2025 = safeNumber(row['% of Revenue 2025']);
-        const revenueShareAmz = safeNumber(row['DEC-25 % of Revenue (AMZ)']);
-        const revenueShareClass = getRevenueSharePillClass(revenueShare2025);
-        const revenueShareAmzClass = getRevenueSharePillClass(revenueShareAmz);
         columns.forEach((key) => {
           const td = document.createElement('td');
           if (key.includes('Signal')) {
             const pill = document.createElement('span');
             const value = row[key] || '-';
             pill.textContent = value;
-            const signalClass = key === 'Signal(AMZ)' ? revenueShareAmzClass : revenueShareClass;
-            pill.className = `pill ${signalClass}`;
+            const signalClass = getSignalClass(value);
+            pill.className = `pill signal-pill ${signalClass}`.trim();
             td.appendChild(pill);
           } else if (key.includes('Action')) {
             const pill = document.createElement('span');
