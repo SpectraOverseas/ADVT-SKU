@@ -215,12 +215,16 @@
       background: #f8fafc;
     }
 
-    tbody tr.table-row-highlight td {
+    tbody td.table-cell-selected {
       background: #d9d9d9;
     }
 
-    thead th.table-column-highlight {
+    tbody tr:hover td.table-cell-selected {
       background: #d9d9d9;
+    }
+
+    thead th.table-column-selected {
+      background: #cfcfcf;
     }
 
     .pill {
@@ -697,7 +701,7 @@
     const renderTable = () => {
       const tableHead = document.getElementById('tableHead');
       const tableBody = document.getElementById('tableBody');
-      clearHighlightedPosition();
+      clearSelectedCell();
       const displayRows = getDisplayRows();
       const start = (state.currentPage - 1) * state.pageSize;
       const pageRows = displayRows.slice(start, start + state.pageSize);
@@ -726,13 +730,12 @@
       });
 
       tableBody.innerHTML = '';
-      pageRows.forEach((row, rowIndex) => {
+      pageRows.forEach((row) => {
         const tr = document.createElement('tr');
-        tr.dataset.row = String(rowIndex);
         columns.forEach((key, columnIndex) => {
           const td = document.createElement('td');
           td.tabIndex = 0;
-          td.dataset.row = String(rowIndex);
+          td.dataset.row = String(tableBody.children.length);
           td.dataset.col = String(columnIndex);
           if (key.includes('Signal')) {
             const pill = document.createElement('span');
@@ -805,56 +808,46 @@
       pagination.appendChild(next);
     };
 
-    let highlightedRowIndex = null;
-    let highlightedColIndex = null;
+    let selectedCell = null;
+    let selectedHeader = null;
 
-    const clearHighlightedPosition = () => {
-      if (highlightedRowIndex !== null) {
-        const previousRow = tableBody.querySelector(`tr[data-row="${highlightedRowIndex}"]`);
-        if (previousRow) {
-          previousRow.classList.remove('table-row-highlight');
-        }
+    const clearSelectedCell = () => {
+      if (selectedCell) {
+        selectedCell.classList.remove('table-cell-selected');
       }
-      if (highlightedColIndex !== null) {
-        const headerCell = document.getElementById('tableHead').children[highlightedColIndex];
-        if (headerCell) {
-          headerCell.classList.remove('table-column-highlight');
-        }
+      if (selectedHeader) {
+        selectedHeader.classList.remove('table-column-selected');
       }
-      highlightedRowIndex = null;
-      highlightedColIndex = null;
+      selectedCell = null;
+      selectedHeader = null;
     };
 
-    const highlightPosition = (cell) => {
+    const selectCell = (cell) => {
       if (!cell) return;
-      const rowIndex = Number.parseInt(cell.dataset.row, 10);
+      if (selectedCell === cell) return;
+      clearSelectedCell();
+      selectedCell = cell;
+      selectedCell.classList.add('table-cell-selected');
       const colIndex = Number.parseInt(cell.dataset.col, 10);
-      if (rowIndex === highlightedRowIndex && colIndex === highlightedColIndex) return;
-      clearHighlightedPosition();
-      const row = tableBody.querySelector(`tr[data-row="${rowIndex}"]`);
-      if (row) {
-        row.classList.add('table-row-highlight');
-        highlightedRowIndex = rowIndex;
-      }
       const headerCell = document.getElementById('tableHead').children[colIndex];
       if (headerCell) {
-        headerCell.classList.add('table-column-highlight');
-        highlightedColIndex = colIndex;
+        selectedHeader = headerCell;
+        selectedHeader.classList.add('table-column-selected');
       }
-      cell.focus({ preventScroll: false });
+      selectedCell.focus({ preventScroll: false });
     };
 
     const tableBody = document.getElementById('tableBody');
     tableBody.addEventListener('click', (event) => {
       const cell = event.target.closest('td');
       if (!cell) return;
-      highlightPosition(cell);
+      selectCell(cell);
     });
 
     tableBody.addEventListener('focusin', (event) => {
       const cell = event.target.closest('td');
       if (!cell) return;
-      highlightPosition(cell);
+      selectCell(cell);
     });
 
     tableBody.addEventListener('keydown', (event) => {
@@ -875,7 +868,7 @@
       const nextCol = col + move[1];
       const nextCell = tableBody.querySelector(`td[data-row="${nextRow}"][data-col="${nextCol}"]`);
       if (nextCell) {
-        highlightPosition(nextCell);
+        selectCell(nextCell);
       }
     });
 
