@@ -234,6 +234,10 @@
       font-size: 12px;
     }
 
+    .is-hidden {
+      display: none;
+    }
+
     @media (max-width: 720px) {
       header {
         padding: 20px 20px 24px;
@@ -309,7 +313,7 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel is-hidden" id="chartSection">
       <div class="chart-grid">
         <div class="chart-card">
           <h3>Top SKUs by Dec-25 Revenue</h3>
@@ -326,9 +330,10 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="tableSection">
       <div class="table-actions">
         <div>
+          <button class="btn btn-outline" id="viewToggle" type="button">Table View</button>
           <strong>SKU Detail Table</strong>
           <div class="muted" id="rowCount">0 rows</div>
         </div>
@@ -336,15 +341,17 @@
           <button class="btn btn-outline" id="downloadCsv">Download CSV</button>
         </div>
       </div>
-      <div style="overflow-x:auto;">
-        <table>
-          <thead>
-            <tr id="tableHead"></tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
+      <div id="tableContent">
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr id="tableHead"></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
       </div>
-      <div class="pagination" id="pagination"></div>
     </section>
   </main>
 
@@ -707,6 +714,23 @@
     document.getElementById('applyFilters').addEventListener('click', applyFilters);
     document.getElementById('resetFilters').addEventListener('click', resetFilters);
     document.getElementById('downloadCsv').addEventListener('click', downloadCsv);
+    const viewToggle = document.getElementById('viewToggle');
+    const chartSection = document.getElementById('chartSection');
+    const tableContent = document.getElementById('tableContent');
+
+    const setView = (view) => {
+      const isTableView = view === 'table';
+      tableContent.classList.toggle('is-hidden', !isTableView);
+      chartSection.classList.toggle('is-hidden', isTableView);
+      viewToggle.textContent = isTableView ? 'Table View' : 'Graph View';
+    };
+
+    viewToggle.addEventListener('click', () => {
+      const isTableVisible = !tableContent.classList.contains('is-hidden');
+      setView(isTableVisible ? 'graph' : 'table');
+    });
+
+    setView('table');
 
     loadData();
   </script>
