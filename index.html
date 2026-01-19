@@ -425,10 +425,7 @@
       const response = await fetch('data.json');
       const payload = await response.json();
       state.headers = Object.values(payload.headers);
-      state.rows = payload.rows.map((row) => ({
-        ...row,
-        'DEC-25 % of Revenue (AMZ)': row['% of Revenue (Spend)']
-      }));
+      state.rows = payload.rows;
       initializeFilters();
       applyFilters();
     };
@@ -634,7 +631,6 @@
         'DEC-25 REVENUE',
         'DEC-25 ADVT SPEND',
         '% of Revenue (Spend)',
-        'DEC-25 % of Revenue (AMZ)',
         'Signal(AMZ)',
         'Action(AMZ)',
         'REVENUE 2025',
@@ -740,7 +736,6 @@
         'DEC-25 REVENUE',
         'DEC-25 ADVT SPEND',
         '% of Revenue (Spend)',
-        'DEC-25 % of Revenue (AMZ)',
         'Signal(AMZ)',
         'Action(AMZ)',
         'REVENUE 2025',
