@@ -6,7 +6,6 @@
   <title>SKU Wise Ad Spend</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
       color-scheme: light;
@@ -303,10 +302,6 @@
           <select id="skuFilter"></select>
         </div>
         <div class="filter-group">
-          <label for="lo1Filter">LO-1</label>
-          <select id="lo1Filter"></select>
-        </div>
-        <div class="filter-group">
           <label for="signalFilter">Signal 2025</label>
           <select id="signalFilter"></select>
         </div>
@@ -416,8 +411,6 @@
       rankCount: null
     };
 
-    const STOCK_SHEET_FILES = ['STOCK SHEET.xlsx', 'STOCK SHEET.xls', 'STOCK SHEET'];
-
     const formatCurrency = (value) => {
       if (typeof value !== 'number' || Number.isNaN(value)) return '-';
       return value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
@@ -494,61 +487,11 @@
       });
     };
 
-    const loadStockSheet = async () => {
-      const fetchWithFallback = async () => {
-        for (const file of STOCK_SHEET_FILES) {
-          try {
-            const response = await fetch(encodeURI(file), { cache: 'no-store' });
-            if (!response.ok) continue;
-            return response.arrayBuffer();
-          } catch (error) {
-            continue;
-          }
-        }
-        return null;
-      };
-
-      if (typeof XLSX === 'undefined') {
-        return new Map();
-      }
-
-      const buffer = await fetchWithFallback();
-      if (!buffer) return new Map();
-      const workbook = XLSX.read(buffer, { type: 'array' });
-      const sheetName = workbook.SheetNames.find((name) => name.toLowerCase() === 'main') || workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      if (!sheet) return new Map();
-
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const headerRow = rows[0] || [];
-      const normalizeHeader = (value) => String(value || '').trim().toLowerCase();
-      const skuIndex = headerRow.findIndex((cell) => normalizeHeader(cell) === 'sku');
-      const lo1Index = headerRow.findIndex((cell) => normalizeHeader(cell) === 'lo-1');
-
-      if (skuIndex === -1 || lo1Index === -1) {
-        return new Map();
-      }
-
-      const map = new Map();
-      rows.slice(1).forEach((row) => {
-        const sku = String(row[skuIndex] || '').trim();
-        if (!sku) return;
-        const lo1 = String(row[lo1Index] || '').trim();
-        map.set(sku, lo1 || null);
-      });
-      return map;
-    };
-
     const loadData = async () => {
-      const [dataResponse, lo1Map] = await Promise.all([
-        fetch('data.json', { cache: 'no-store' }).then((response) => response.json()),
-        loadStockSheet()
-      ]);
-      state.headers = Object.values(dataResponse.headers);
-      state.rows = dataResponse.rows.map((row) => ({
-        ...row,
-        'LO-1': lo1Map.get(String(row['SKU PLAIN'] || '').trim()) || null
-      }));
+      const response = await fetch('data.json');
+      const payload = await response.json();
+      state.headers = Object.values(payload.headers);
+      state.rows = payload.rows;
       initializeFilters();
       applyFilters();
     };
@@ -556,13 +499,11 @@
     const initializeFilters = () => {
       const categories = Array.from(new Set(state.rows.map((row) => row['CAT']).filter(Boolean))).sort();
       const skus = Array.from(new Set(state.rows.map((row) => row['SKU PLAIN']).filter(Boolean))).sort();
-      const lo1Values = Array.from(new Set(state.rows.map((row) => row['LO-1']).filter(Boolean))).sort();
       const signals = Array.from(new Set(state.rows.map((row) => row['Signal 2025']).filter(Boolean))).sort();
       const actions = Array.from(new Set(state.rows.map((row) => row['Action 2025']).filter(Boolean))).sort();
 
       buildOptions(document.getElementById('categoryFilter'), categories);
       buildOptions(document.getElementById('skuFilter'), skus);
-      buildOptions(document.getElementById('lo1Filter'), lo1Values);
       buildOptions(document.getElementById('signalFilter'), signals);
       buildOptions(document.getElementById('actionFilter'), actions);
     };
@@ -570,7 +511,6 @@
     const applyFilters = () => {
       const category = document.getElementById('categoryFilter').value;
       const sku = document.getElementById('skuFilter').value;
-      const lo1 = document.getElementById('lo1Filter').value;
       const signal = document.getElementById('signalFilter').value;
       const action = document.getElementById('actionFilter').value;
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -578,7 +518,6 @@
       state.filtered = state.rows.filter((row) => {
         if (category && row['CAT'] !== category) return false;
         if (sku && row['SKU PLAIN'] !== sku) return false;
-        if (lo1 && row['LO-1'] !== lo1) return false;
         if (signal && row['Signal 2025'] !== signal) return false;
         if (action && row['Action 2025'] !== action) return false;
         if (search && !String(row['SKU PLAIN']).toLowerCase().includes(search)) return false;
@@ -594,7 +533,6 @@
     const resetFilters = () => {
       document.getElementById('categoryFilter').value = '';
       document.getElementById('skuFilter').value = '';
-      document.getElementById('lo1Filter').value = '';
       document.getElementById('signalFilter').value = '';
       document.getElementById('actionFilter').value = '';
       document.getElementById('searchInput').value = '';
@@ -757,7 +695,6 @@
       const columns = [
         'CAT',
         'SKU PLAIN',
-        'LO-1',
         'DEC-25 REVENUE',
         'DEC-25 ADVT SPEND',
         '% of Revenue (Spend)',
@@ -799,8 +736,6 @@
             pill.textContent = value;
             pill.className = `pill ${getActionPillClass(value)}`;
             td.appendChild(pill);
-          } else if (key === 'LO-1') {
-            td.textContent = row[key] || '-';
           } else if (typeof row[key] === 'number') {
             if (key.includes('%')) {
               td.textContent = formatPercent(row[key]);
@@ -938,7 +873,6 @@
       const headers = [
         'CAT',
         'SKU PLAIN',
-        'LO-1',
         'DEC-25 REVENUE',
         'DEC-25 ADVT SPEND',
         '% of Revenue (Spend)',
@@ -968,7 +902,6 @@
 
     document.getElementById('categoryFilter').addEventListener('change', applyFilters);
     document.getElementById('skuFilter').addEventListener('change', applyFilters);
-    document.getElementById('lo1Filter').addEventListener('change', applyFilters);
     document.getElementById('signalFilter').addEventListener('change', applyFilters);
     document.getElementById('actionFilter').addEventListener('change', applyFilters);
     document.getElementById('searchInput').addEventListener('input', applyFilters);
