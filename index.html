@@ -302,6 +302,10 @@
           <select id="skuFilter"></select>
         </div>
         <div class="filter-group">
+          <label for="lo1Filter">LO-1</label>
+          <select id="lo1Filter"></select>
+        </div>
+        <div class="filter-group">
           <label for="signalFilter">Signal 2025</label>
           <select id="signalFilter"></select>
         </div>
@@ -499,11 +503,13 @@
     const initializeFilters = () => {
       const categories = Array.from(new Set(state.rows.map((row) => row['CAT']).filter(Boolean))).sort();
       const skus = Array.from(new Set(state.rows.map((row) => row['SKU PLAIN']).filter(Boolean))).sort();
+      const lo1Values = Array.from(new Set(state.rows.map((row) => row['LO-1']).filter(Boolean))).sort();
       const signals = Array.from(new Set(state.rows.map((row) => row['Signal 2025']).filter(Boolean))).sort();
       const actions = Array.from(new Set(state.rows.map((row) => row['Action 2025']).filter(Boolean))).sort();
 
       buildOptions(document.getElementById('categoryFilter'), categories);
       buildOptions(document.getElementById('skuFilter'), skus);
+      buildOptions(document.getElementById('lo1Filter'), lo1Values);
       buildOptions(document.getElementById('signalFilter'), signals);
       buildOptions(document.getElementById('actionFilter'), actions);
     };
@@ -511,6 +517,7 @@
     const applyFilters = () => {
       const category = document.getElementById('categoryFilter').value;
       const sku = document.getElementById('skuFilter').value;
+      const lo1 = document.getElementById('lo1Filter').value;
       const signal = document.getElementById('signalFilter').value;
       const action = document.getElementById('actionFilter').value;
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -518,6 +525,7 @@
       state.filtered = state.rows.filter((row) => {
         if (category && row['CAT'] !== category) return false;
         if (sku && row['SKU PLAIN'] !== sku) return false;
+        if (lo1 && row['LO-1'] !== lo1) return false;
         if (signal && row['Signal 2025'] !== signal) return false;
         if (action && row['Action 2025'] !== action) return false;
         if (search && !String(row['SKU PLAIN']).toLowerCase().includes(search)) return false;
@@ -533,6 +541,7 @@
     const resetFilters = () => {
       document.getElementById('categoryFilter').value = '';
       document.getElementById('skuFilter').value = '';
+      document.getElementById('lo1Filter').value = '';
       document.getElementById('signalFilter').value = '';
       document.getElementById('actionFilter').value = '';
       document.getElementById('searchInput').value = '';
@@ -695,6 +704,7 @@
       const columns = [
         'CAT',
         'SKU PLAIN',
+        'LO-1',
         'DEC-25 REVENUE',
         'DEC-25 ADVT SPEND',
         '% of Revenue (Spend)',
@@ -873,6 +883,7 @@
       const headers = [
         'CAT',
         'SKU PLAIN',
+        'LO-1',
         'DEC-25 REVENUE',
         'DEC-25 ADVT SPEND',
         '% of Revenue (Spend)',
@@ -902,6 +913,7 @@
 
     document.getElementById('categoryFilter').addEventListener('change', applyFilters);
     document.getElementById('skuFilter').addEventListener('change', applyFilters);
+    document.getElementById('lo1Filter').addEventListener('change', applyFilters);
     document.getElementById('signalFilter').addEventListener('change', applyFilters);
     document.getElementById('actionFilter').addEventListener('change', applyFilters);
     document.getElementById('searchInput').addEventListener('input', applyFilters);
