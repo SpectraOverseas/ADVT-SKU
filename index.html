@@ -652,17 +652,14 @@
       pageRows.forEach((row) => {
         const tr = document.createElement('tr');
         const revenueShare2025 = safeNumber(row['% of Revenue 2025']);
-        const revenueShareAmz = safeNumber(row['DEC-25 % of Revenue (AMZ)']);
         const revenueShareClass = getRevenueSharePillClass(revenueShare2025);
-        const revenueShareAmzClass = getRevenueSharePillClass(revenueShareAmz);
         columns.forEach((key) => {
           const td = document.createElement('td');
           if (key.includes('Signal')) {
             const pill = document.createElement('span');
             const value = row[key] || '-';
             pill.textContent = value;
-            const signalClass = key === 'Signal(AMZ)' ? revenueShareAmzClass : revenueShareClass;
-            pill.className = `pill ${signalClass}`;
+            pill.className = `pill ${revenueShareClass}`;
             td.appendChild(pill);
           } else if (key.includes('Action')) {
             const pill = document.createElement('span');
