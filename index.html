@@ -175,6 +175,21 @@
       margin-bottom: 12px;
     }
 
+    .table-limit-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .table-limit-controls select,
+    .table-limit-controls input {
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 13px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -336,6 +351,13 @@
           <div class="muted" id="rowCount">0 rows</div>
         </div>
         <div class="filter-actions">
+          <div class="table-limit-controls" aria-label="Top or bottom records">
+            <select id="rankDirection" aria-label="Top or bottom selection">
+              <option value="top">Top</option>
+              <option value="bottom">Bottom</option>
+            </select>
+            <input id="rankCount" type="number" min="1" step="1" placeholder="Count" aria-label="Number of records" />
+          </div>
           <button class="btn btn-outline" id="viewToggle" type="button">Table View</button>
           <button class="btn btn-outline" id="downloadCsv">Download CSV</button>
         </div>
@@ -362,7 +384,9 @@
       currentPage: 1,
       pageSize: 15,
       sortKey: null,
-      sortDir: 'desc'
+      sortDir: 'desc',
+      rankMode: 'top',
+      rankCount: null
     };
 
     const formatCurrency = (value) => {
@@ -433,10 +457,6 @@
         if (search && !String(row['SKU PLAIN']).toLowerCase().includes(search)) return false;
         return true;
       });
-
-      if (state.sortKey) {
-        sortRows(state.sortKey, state.sortDir, false);
-      }
 
       state.currentPage = 1;
       updateKPIs();
@@ -572,11 +592,39 @@
       });
     };
 
+    const primaryMetric = 'DEC-25 REVENUE';
+
+    const sortRowsArray = (rows, key, direction) => rows.sort((a, b) => {
+      const aVal = a[key];
+      const bVal = b[key];
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return (aVal - bVal) * direction;
+      }
+      return String(aVal || '').localeCompare(String(bVal || '')) * direction;
+    });
+
+    const getDisplayRows = () => {
+      let rows = state.filtered;
+      if (state.rankCount) {
+        const direction = state.rankMode === 'bottom' ? 1 : -1;
+        rows = [...rows];
+        sortRowsArray(rows, primaryMetric, direction);
+        rows = rows.slice(0, state.rankCount);
+      }
+      if (state.sortKey) {
+        const direction = state.sortDir === 'asc' ? 1 : -1;
+        rows = [...rows];
+        sortRowsArray(rows, state.sortKey, direction);
+      }
+      return rows;
+    };
+
     const renderTable = () => {
       const tableHead = document.getElementById('tableHead');
       const tableBody = document.getElementById('tableBody');
+      const displayRows = getDisplayRows();
       const start = (state.currentPage - 1) * state.pageSize;
-      const pageRows = state.filtered.slice(start, start + state.pageSize);
+      const pageRows = displayRows.slice(start, start + state.pageSize);
       const columns = [
         'CAT',
         'SKU PLAIN',
@@ -633,8 +681,8 @@
         tableBody.appendChild(tr);
       });
 
-      document.getElementById('rowCount').textContent = `${state.filtered.length} rows`;
-      renderPagination();
+      document.getElementById('rowCount').textContent = `${displayRows.length} rows`;
+      renderPagination(displayRows.length);
     };
 
     const sortRows = (key, dir = null, update = true) => {
@@ -644,23 +692,14 @@
       } else {
         state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
       }
-      const direction = state.sortDir === 'asc' ? 1 : -1;
-      state.filtered.sort((a, b) => {
-        const aVal = a[key];
-        const bVal = b[key];
-        if (typeof aVal === 'number' && typeof bVal === 'number') {
-          return (aVal - bVal) * direction;
-        }
-        return String(aVal || '').localeCompare(String(bVal || '')) * direction;
-      });
       if (update) {
         renderTable();
       }
     };
 
-    const renderPagination = () => {
+    const renderPagination = (totalRows) => {
       const pagination = document.getElementById('pagination');
-      const totalPages = Math.ceil(state.filtered.length / state.pageSize);
+      const totalPages = Math.ceil(totalRows / state.pageSize);
       pagination.innerHTML = '';
       const info = document.createElement('span');
       info.className = 'muted';
@@ -725,6 +764,17 @@
     document.getElementById('searchInput').addEventListener('input', applyFilters);
     document.getElementById('resetFilters').addEventListener('click', resetFilters);
     document.getElementById('downloadCsv').addEventListener('click', downloadCsv);
+    document.getElementById('rankDirection').addEventListener('change', (event) => {
+      state.rankMode = event.target.value;
+      state.currentPage = 1;
+      renderTable();
+    });
+    document.getElementById('rankCount').addEventListener('input', (event) => {
+      const value = Number.parseInt(event.target.value, 10);
+      state.rankCount = Number.isFinite(value) && value > 0 ? value : null;
+      state.currentPage = 1;
+      renderTable();
+    });
     const viewToggle = document.getElementById('viewToggle');
     const chartSection = document.getElementById('chartSection');
     const tableContent = document.getElementById('tableContent');
