@@ -215,10 +215,6 @@
       background: #f8fafc;
     }
 
-    tbody td.table-cell-selected {
-      background: #f0f0f0;
-    }
-
     .pill {
       display: inline-flex;
       align-items: center;
@@ -693,7 +689,6 @@
     const renderTable = () => {
       const tableHead = document.getElementById('tableHead');
       const tableBody = document.getElementById('tableBody');
-      clearSelectedCell();
       const displayRows = getDisplayRows();
       const start = (state.currentPage - 1) * state.pageSize;
       const pageRows = displayRows.slice(start, start + state.pageSize);
@@ -724,11 +719,8 @@
       tableBody.innerHTML = '';
       pageRows.forEach((row) => {
         const tr = document.createElement('tr');
-        columns.forEach((key, columnIndex) => {
+        columns.forEach((key) => {
           const td = document.createElement('td');
-          td.tabIndex = 0;
-          td.dataset.row = String(tableBody.children.length);
-          td.dataset.col = String(columnIndex);
           if (key.includes('Signal')) {
             const pill = document.createElement('span');
             const value = row[key] || '-';
@@ -799,53 +791,6 @@
       });
       pagination.appendChild(next);
     };
-
-    let selectedCell = null;
-
-    const clearSelectedCell = () => {
-      if (selectedCell) {
-        selectedCell.classList.remove('table-cell-selected');
-      }
-      selectedCell = null;
-    };
-
-    const selectCell = (cell) => {
-      if (!cell) return;
-      if (selectedCell === cell) return;
-      clearSelectedCell();
-      selectedCell = cell;
-      selectedCell.classList.add('table-cell-selected');
-      selectedCell.focus({ preventScroll: false });
-    };
-
-    const tableBody = document.getElementById('tableBody');
-    tableBody.addEventListener('click', (event) => {
-      const cell = event.target.closest('td');
-      if (!cell) return;
-      selectCell(cell);
-    });
-
-    tableBody.addEventListener('keydown', (event) => {
-      const cell = event.target.closest('td');
-      if (!cell) return;
-      const keyMap = {
-        ArrowUp: [-1, 0],
-        ArrowDown: [1, 0],
-        ArrowLeft: [0, -1],
-        ArrowRight: [0, 1]
-      };
-      const move = keyMap[event.key];
-      if (!move) return;
-      event.preventDefault();
-      const row = Number.parseInt(cell.dataset.row, 10);
-      const col = Number.parseInt(cell.dataset.col, 10);
-      const nextRow = row + move[0];
-      const nextCol = col + move[1];
-      const nextCell = tableBody.querySelector(`td[data-row="${nextRow}"][data-col="${nextCol}"]`);
-      if (nextCell) {
-        selectCell(nextCell);
-      }
-    });
 
     const downloadCsv = () => {
       const headers = [
