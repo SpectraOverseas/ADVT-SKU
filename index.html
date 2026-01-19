@@ -417,6 +417,21 @@
     };
 
     const STOCK_SHEET_FILES = ['STOCK SHEET.xlsx', 'STOCK SHEET.xls', 'STOCK SHEET'];
+    const TABLE_COLUMNS = [
+      'CAT',
+      'SKU PLAIN',
+      'LO-1',
+      'DEC-25 REVENUE',
+      'DEC-25 ADVT SPEND',
+      '% of Revenue (Spend)',
+      'Signal(AMZ)',
+      'Action(AMZ)',
+      'REVENUE 2025',
+      'ADVT SPEND 2025',
+      '% of Revenue 2025',
+      'Signal 2025',
+      'Action 2025'
+    ];
 
     const formatCurrency = (value) => {
       if (typeof value !== 'number' || Number.isNaN(value)) return '-';
@@ -760,21 +775,7 @@
       const displayRows = getDisplayRows();
       const start = (state.currentPage - 1) * state.pageSize;
       const pageRows = displayRows.slice(start, start + state.pageSize);
-      const columns = [
-        'CAT',
-        'SKU PLAIN',
-        'LO-1',
-        'DEC-25 REVENUE',
-        'DEC-25 ADVT SPEND',
-        '% of Revenue (Spend)',
-        'Signal(AMZ)',
-        'Action(AMZ)',
-        'REVENUE 2025',
-        'ADVT SPEND 2025',
-        '% of Revenue 2025',
-        'Signal 2025',
-        'Action 2025'
-      ];
+      const columns = TABLE_COLUMNS;
 
       tableHead.innerHTML = '';
       columns.forEach((key) => {
@@ -941,21 +942,7 @@
     });
 
     const downloadCsv = () => {
-      const headers = [
-        'CAT',
-        'SKU PLAIN',
-        'LO-1',
-        'DEC-25 REVENUE',
-        'DEC-25 ADVT SPEND',
-        '% of Revenue (Spend)',
-        'Signal(AMZ)',
-        'Action(AMZ)',
-        'REVENUE 2025',
-        'ADVT SPEND 2025',
-        '% of Revenue 2025',
-        'Signal 2025',
-        'Action 2025'
-      ];
+      const headers = TABLE_COLUMNS;
       const lines = [headers.join(',')];
       state.filtered.forEach((row) => {
         const line = headers.map((header) => {
