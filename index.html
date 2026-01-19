@@ -216,15 +216,11 @@
     }
 
     tbody td.table-cell-selected {
-      background: #e0e0e0;
+      background: #f0f0f0;
     }
 
     tbody tr:hover td.table-cell-selected {
-      background: #e0e0e0;
-    }
-
-    thead th.table-column-selected {
-      background: #d6d6d6;
+      background: #f0f0f0;
     }
 
     .pill {
@@ -809,17 +805,12 @@
     };
 
     let selectedCell = null;
-    let selectedHeader = null;
 
     const clearSelectedCell = () => {
       if (selectedCell) {
         selectedCell.classList.remove('table-cell-selected');
       }
-      if (selectedHeader) {
-        selectedHeader.classList.remove('table-column-selected');
-      }
       selectedCell = null;
-      selectedHeader = null;
     };
 
     const selectCell = (cell) => {
@@ -828,12 +819,6 @@
       clearSelectedCell();
       selectedCell = cell;
       selectedCell.classList.add('table-cell-selected');
-      const colIndex = Number.parseInt(cell.dataset.col, 10);
-      const headerCell = document.getElementById('tableHead').children[colIndex];
-      if (headerCell) {
-        selectedHeader = headerCell;
-        selectedHeader.classList.add('table-column-selected');
-      }
       selectedCell.focus({ preventScroll: false });
     };
 
