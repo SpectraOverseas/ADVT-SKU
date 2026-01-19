@@ -216,15 +216,15 @@
     }
 
     tbody td.table-cell-selected {
-      background: #d9d9d9;
+      background: #e0e0e0;
     }
 
     tbody tr:hover td.table-cell-selected {
-      background: #d9d9d9;
+      background: #e0e0e0;
     }
 
     thead th.table-column-selected {
-      background: #cfcfcf;
+      background: #d6d6d6;
     }
 
     .pill {
@@ -839,12 +839,6 @@
 
     const tableBody = document.getElementById('tableBody');
     tableBody.addEventListener('click', (event) => {
-      const cell = event.target.closest('td');
-      if (!cell) return;
-      selectCell(cell);
-    });
-
-    tableBody.addEventListener('focusin', (event) => {
       const cell = event.target.closest('td');
       if (!cell) return;
       selectCell(cell);
