@@ -235,6 +235,12 @@
     .pill.signal-high-risk { background: #fd7e14; color: #4a1e00; }
     .pill.signal-very-risky { background: #dc3545; color: #fff; }
     .pill.signal-unknown { background: #e2e8f0; color: var(--text); }
+    .pill.action-good { background: #28a745; color: #fff; }
+    .pill.action-check-only-spent { background: #5bc0de; color: #0b3d4d; }
+    .pill.action-review-campaign { background: #ffc107; color: #4a3b00; }
+    .pill.action-urgently-optimize { background: #fd7e14; color: #4a1e00; }
+    .pill.action-stop-immediately { background: #dc3545; color: #fff; }
+    .pill.action-unknown { background: #e2e8f0; color: var(--text); }
 
     .pagination {
       display: flex;
@@ -428,6 +434,24 @@
           return 'signal-very-risky';
         default:
           return 'signal-unknown';
+      }
+    };
+
+    const getActionPillClass = (value) => {
+      if (!value) return 'action-unknown';
+      switch (String(value).trim().toLowerCase()) {
+        case 'good for now':
+          return 'action-good';
+        case 'check only spent':
+          return 'action-check-only-spent';
+        case 'review campaign':
+          return 'action-review-campaign';
+        case 'urgently optimize':
+          return 'action-urgently-optimize';
+        case 'stop immediately':
+          return 'action-stop-immediately';
+        default:
+          return 'action-unknown';
       }
     };
 
@@ -687,7 +711,7 @@
             const pill = document.createElement('span');
             const value = row[key] || '-';
             pill.textContent = value;
-            pill.className = 'pill warning';
+            pill.className = `pill ${getActionPillClass(value)}`;
             td.appendChild(pill);
           } else if (typeof row[key] === 'number') {
             if (key.includes('%')) {
