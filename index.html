@@ -491,11 +491,40 @@
       });
     };
 
+    const normalizeSku = (value) => String(value ?? '');
+
+    const applyLo1Lookup = (rows, stockRows) => {
+      const lo1Lookup = new Map();
+      stockRows.forEach((row) => {
+        const sku = normalizeSku(row.SKU);
+        if (!sku) return;
+        lo1Lookup.set(sku, row['LO-1'] ?? '');
+      });
+
+      return rows.map((row) => {
+        const sku = normalizeSku(row['SKU PLAIN']);
+        const lo1Value = sku ? (lo1Lookup.get(sku) ?? '') : '';
+        return { ...row, 'LO-1': lo1Value };
+      });
+    };
+
     const loadData = async () => {
       const response = await fetch('data.json');
       const payload = await response.json();
+      let stockRows = [];
+      try {
+        const stockResponse = await fetch('stock-sheet.json');
+        if (stockResponse.ok) {
+          const stockPayload = await stockResponse.json();
+          stockRows = Array.isArray(stockPayload) ? stockPayload : (stockPayload.rows || []);
+        } else {
+          console.warn('Stock sheet lookup file missing; LO-1 values will be blank.');
+        }
+      } catch (error) {
+        console.warn('Unable to load stock sheet lookup file; LO-1 values will be blank.', error);
+      }
       state.headers = Object.values(payload.headers);
-      state.rows = payload.rows;
+      state.rows = applyLo1Lookup(payload.rows, stockRows);
       initializeFilters();
       applyFilters();
     };
