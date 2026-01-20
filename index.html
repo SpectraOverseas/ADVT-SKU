@@ -739,33 +739,67 @@
       return rows;
     };
 
+    const tableColumns = [
+      { key: 'CAT', label: 'CAT' },
+      { key: 'SKU PLAIN', label: 'SKU PLAIN' },
+      { key: 'LO-1', label: 'LO-1' },
+      { key: 'JAN-25 REVENUE', label: 'JAN-25 REVENUE' },
+      { key: 'JAN-25 ADVT SPEND', label: 'JAN-25 ADVT SPEND' },
+      { key: 'JAN-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'FEB-25 REVENUE', label: 'FEB-25 REVENUE' },
+      { key: 'FEB-25 ADVT SPEND', label: 'FEB-25 ADVT SPEND' },
+      { key: 'FEB-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'MAR-25 REVENUE', label: 'MAR-25 REVENUE' },
+      { key: 'MAR-25 ADVT SPEND', label: 'MAR-25 ADVT SPEND' },
+      { key: 'MAR-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'APR-25 REVENUE', label: 'APR-25 REVENUE' },
+      { key: 'APR-25 ADVT SPEND', label: 'APR-25 ADVT SPEND' },
+      { key: 'APR-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'MAY-25 REVENUE', label: 'MAY-25 REVENUE' },
+      { key: 'MAY-25 ADVT SPEND', label: 'MAY-25 ADVT SPEND' },
+      { key: 'MAY-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'JUN-25 REVENUE', label: 'JUN-25 REVENUE' },
+      { key: 'JUN-25 ADVT SPEND', label: 'JUN-25 ADVT SPEND' },
+      { key: 'JUN-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'JUL-25 REVENUE', label: 'JUL-25 REVENUE' },
+      { key: 'JUL-25 ADVT SPEND', label: 'JUL-25 ADVT SPEND' },
+      { key: 'JUL-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'AUG-25 REVENUE', label: 'AUG-25 REVENUE' },
+      { key: 'AUG-25 ADVT SPEND', label: 'AUG-25 ADVT SPEND' },
+      { key: 'AUG-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'SEP-25 REVENUE', label: 'SEP-25 REVENUE' },
+      { key: 'SEP-25 ADVT SPEND', label: 'SEP-25 ADVT SPEND' },
+      { key: 'SEP-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'OCT-25 REVENUE', label: 'OCT-25 REVENUE' },
+      { key: 'OCT-25 ADVT SPEND', label: 'OCT-25 ADVT SPEND' },
+      { key: 'OCT-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'NOV-25 REVENUE', label: 'NOV-25 REVENUE' },
+      { key: 'NOV-25 ADVT SPEND', label: 'NOV-25 ADVT SPEND' },
+      { key: 'NOV-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'DEC-25 REVENUE', label: 'DEC-25 REVENUE' },
+      { key: 'DEC-25 ADVT SPEND', label: 'DEC-25 ADVT SPEND' },
+      { key: '% of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'Signal(AMZ)', label: 'Signal(AMZ)' },
+      { key: 'Action(AMZ)', label: 'Action(AMZ)' },
+      { key: 'REVENUE 2025', label: 'REVENUE 2025' },
+      { key: 'ADVT SPEND 2025', label: 'ADVT SPEND 2025' },
+      { key: '% of Revenue 2025', label: '% of Revenue 2025' },
+      { key: 'Signal 2025', label: 'Signal 2025' },
+      { key: 'Action 2025', label: 'Action 2025' }
+    ];
+
     const renderTable = () => {
       const tableHead = document.getElementById('tableHead');
       const tableBody = document.getElementById('tableBody');
       const displayRows = getDisplayRows();
       const start = (state.currentPage - 1) * state.pageSize;
       const pageRows = displayRows.slice(start, start + state.pageSize);
-      const columns = [
-        'CAT',
-        'SKU PLAIN',
-        'LO-1',
-        'DEC-25 REVENUE',
-        'DEC-25 ADVT SPEND',
-        '% of Revenue (Spend)',
-        'Signal(AMZ)',
-        'Action(AMZ)',
-        'REVENUE 2025',
-        'ADVT SPEND 2025',
-        '% of Revenue 2025',
-        'Signal 2025',
-        'Action 2025'
-      ];
-      const columnAlignments = getColumnAlignments(columns, state.rows);
+      const columnAlignments = getColumnAlignments(tableColumns, state.rows);
 
       tableHead.innerHTML = '';
-      columns.forEach((key, index) => {
+      tableColumns.forEach(({ key, label }, index) => {
         const th = document.createElement('th');
-        th.textContent = key;
+        th.textContent = label;
         th.dataset.colIndex = String(index);
         th.classList.add(columnAlignments[key]);
         th.addEventListener('click', () => sortRows(key));
@@ -775,7 +809,7 @@
       tableBody.innerHTML = '';
       pageRows.forEach((row) => {
         const tr = document.createElement('tr');
-        columns.forEach((key, index) => {
+        tableColumns.forEach(({ key }, index) => {
           const td = document.createElement('td');
           td.dataset.colIndex = String(index);
           td.classList.add(columnAlignments[key]);
@@ -813,12 +847,12 @@
 
     const getColumnAlignments = (columns, rows) => {
       const alignments = {};
-      columns.forEach((column) => {
+      columns.forEach(({ key }) => {
         const values = rows
-          .map((row) => row[column])
+          .map((row) => row[key])
           .filter((value) => value !== null && value !== undefined);
         const isNumeric = values.length > 0 && values.every((value) => isNumericValue(value));
-        alignments[column] = isNumeric ? 'align-right' : 'align-center';
+        alignments[key] = isNumeric ? 'align-right' : 'align-center';
       });
       return alignments;
     };
@@ -865,25 +899,10 @@
     };
 
     const downloadCsv = () => {
-      const headers = [
-        'CAT',
-        'SKU PLAIN',
-        'LO-1',
-        'DEC-25 REVENUE',
-        'DEC-25 ADVT SPEND',
-        '% of Revenue (Spend)',
-        'Signal(AMZ)',
-        'Action(AMZ)',
-        'REVENUE 2025',
-        'ADVT SPEND 2025',
-        '% of Revenue 2025',
-        'Signal 2025',
-        'Action 2025'
-      ];
-      const lines = [headers.join(',')];
+      const lines = [tableColumns.map(({ label }) => label).join(',')];
       state.filtered.forEach((row) => {
-        const line = headers.map((header) => {
-          const value = row[header] ?? '';
+        const line = tableColumns.map(({ key }) => {
+          const value = row[key] ?? '';
           return `"${String(value).replace(/"/g, '""')}"`;
         });
         lines.push(line.join(','));
