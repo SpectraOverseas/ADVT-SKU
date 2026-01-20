@@ -442,53 +442,48 @@
     };
 
     const buildLo1LookupKey = (row) => {
+      const category = String(normalizeLookupValue(row['CAT']) || '').toLowerCase();
       const sku = String(normalizeLookupValue(row['SKU PLAIN']) || '').toLowerCase();
-      return sku;
+      return `${category}|${sku}`;
     };
 
     const buildLo1Lookup = (rows) => {
-      const lookup = new Map();
-      const conflicts = [];
-
+      const counts = new Map();
       rows.forEach((row) => {
         const key = buildLo1LookupKey(row);
-        if (!key) return;
+        if (!key || key === '|') return;
         const lo1 = normalizeLookupValue(row['LO-1']);
         if (!lo1) return;
-
-        if (!lookup.has(key)) {
-          lookup.set(key, lo1);
-          return;
+        if (!counts.has(key)) {
+          counts.set(key, new Map());
         }
-
-        const existing = lookup.get(key);
-        if (existing !== lo1) {
-          conflicts.push({
-            key,
-            sku: row['SKU PLAIN'],
-            existing,
-            incoming: lo1
-          });
-        }
+        const lo1Counts = counts.get(key);
+        lo1Counts.set(lo1, (lo1Counts.get(lo1) || 0) + 1);
       });
 
-      return { lookup, conflicts };
+      const lookup = new Map();
+      counts.forEach((lo1Counts, key) => {
+        let bestValue = null;
+        let bestCount = -1;
+        lo1Counts.forEach((count, lo1) => {
+          if (count > bestCount) {
+            bestValue = lo1;
+            bestCount = count;
+          }
+        });
+        if (bestValue) {
+          lookup.set(key, bestValue);
+        }
+      });
+      return lookup;
     };
 
     const applyLo1Lookup = (rows) => {
-      const { lookup, conflicts } = buildLo1Lookup(rows);
-      if (conflicts.length > 0) {
-        console.warn('LO-1 lookup conflicts detected. Existing values were preserved.', conflicts);
-      }
-
+      const lookup = buildLo1Lookup(rows);
       return rows.map((row) => {
         const key = buildLo1LookupKey(row);
-        const currentLo1 = row['LO-1'];
-        if (normalizeLookupValue(currentLo1)) {
-          return row;
-        }
-        const fallbackLo1 = lookup.get(key);
-        return fallbackLo1 ? { ...row, 'LO-1': fallbackLo1 } : row;
+        const resolvedLo1 = lookup.get(key) ?? normalizeLookupValue(row['LO-1']);
+        return { ...row, 'LO-1': resolvedLo1 };
       });
     };
 
