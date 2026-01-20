@@ -703,7 +703,7 @@
       });
     };
 
-    const primaryMetric = 'DEC-25 REVENUE';
+    const topBottomMetric = 'REVENUE 2025';
 
     const sortRowsArray = (rows, key, direction) => rows.sort((a, b) => {
       const aVal = a[key];
@@ -718,8 +718,9 @@
       let rows = state.filtered;
       if (state.rankCount) {
         const direction = state.rankMode === 'bottom' ? 1 : -1;
+        rows = rows.filter((row) => isNumericValue(row[topBottomMetric]));
         rows = [...rows];
-        sortRowsArray(rows, primaryMetric, direction);
+        sortRowsArray(rows, topBottomMetric, direction);
         rows = rows.slice(0, state.rankCount);
       }
       if (state.sortKey) {
