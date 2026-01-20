@@ -436,6 +436,57 @@
 
     const safeNumber = (value) => (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
 
+    const normalizeLookupValue = (value) => {
+      if (typeof value !== 'string') return value;
+      return value.replace(/\s+/g, ' ').trim();
+    };
+
+    const buildLo1LookupKey = (row) => {
+      const category = String(normalizeLookupValue(row['CAT']) || '').toLowerCase();
+      const sku = String(normalizeLookupValue(row['SKU PLAIN']) || '').toLowerCase();
+      return `${category}|${sku}`;
+    };
+
+    const buildLo1Lookup = (rows) => {
+      const counts = new Map();
+      rows.forEach((row) => {
+        const key = buildLo1LookupKey(row);
+        if (!key || key === '|') return;
+        const lo1 = normalizeLookupValue(row['LO-1']);
+        if (!lo1) return;
+        if (!counts.has(key)) {
+          counts.set(key, new Map());
+        }
+        const lo1Counts = counts.get(key);
+        lo1Counts.set(lo1, (lo1Counts.get(lo1) || 0) + 1);
+      });
+
+      const lookup = new Map();
+      counts.forEach((lo1Counts, key) => {
+        let bestValue = null;
+        let bestCount = -1;
+        lo1Counts.forEach((count, lo1) => {
+          if (count > bestCount) {
+            bestValue = lo1;
+            bestCount = count;
+          }
+        });
+        if (bestValue) {
+          lookup.set(key, bestValue);
+        }
+      });
+      return lookup;
+    };
+
+    const applyLo1Lookup = (rows) => {
+      const lookup = buildLo1Lookup(rows);
+      return rows.map((row) => {
+        const key = buildLo1LookupKey(row);
+        const resolvedLo1 = lookup.get(key) ?? normalizeLookupValue(row['LO-1']);
+        return { ...row, 'LO-1': resolvedLo1 };
+      });
+    };
+
     const getSignalPillClass = (value) => {
       if (!value) return 'signal-unknown';
       switch (String(value).trim().toLowerCase()) {
@@ -494,7 +545,7 @@
       const response = await fetch('data.json');
       const payload = await response.json();
       state.headers = Object.values(payload.headers);
-      state.rows = payload.rows;
+      state.rows = applyLo1Lookup(payload.rows);
       initializeFilters();
       applyFilters();
     };
