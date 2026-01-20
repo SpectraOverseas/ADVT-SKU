@@ -490,11 +490,40 @@
       });
     };
 
+    const applyLo1Lookup = (rows, lo1Lookup = {}) => {
+      if (!lo1Lookup || Object.keys(lo1Lookup).length === 0) {
+        return rows;
+      }
+
+      let corrected = 0;
+      const pendingLookups = new Set(Object.keys(lo1Lookup));
+      const updated = rows.map((row) => {
+        const sku = row['SKU PLAIN'];
+        if (!sku) return row;
+        const expected = lo1Lookup[sku];
+        if (!expected) {
+          return row;
+        }
+        pendingLookups.delete(sku);
+        if (row['LO-1'] !== expected) {
+          corrected += 1;
+          return { ...row, 'LO-1': expected };
+        }
+        return row;
+      });
+
+      if (corrected || pendingLookups.size) {
+        console.info('LO-1 lookup validation complete.', { corrected, unmatchedLookups: pendingLookups.size });
+      }
+
+      return updated;
+    };
+
     const loadData = async () => {
       const response = await fetch('data.json');
       const payload = await response.json();
       state.headers = Object.values(payload.headers);
-      state.rows = payload.rows;
+      state.rows = applyLo1Lookup(payload.rows || [], payload.lookup?.lo1BySku);
       initializeFilters();
       applyFilters();
     };
