@@ -413,7 +413,7 @@
     const state = {
       rows: [],
       filtered: [],
-      headers: [],
+      headerMap: {},
       currentPage: 1,
       pageSize: 15,
       sortKey: null,
@@ -538,7 +538,7 @@
     const loadData = async () => {
       const response = await fetch('data.json');
       const payload = await response.json();
-      state.headers = Object.values(payload.headers);
+      state.headerMap = payload.headers || {};
       state.rows = applyLo1Lookup(payload.rows || [], payload.lookup?.lo1BySku);
       initializeFilters();
       applyFilters();
@@ -739,16 +739,39 @@
       return rows;
     };
 
-    const renderTable = () => {
-      const tableHead = document.getElementById('tableHead');
-      const tableBody = document.getElementById('tableBody');
-      const displayRows = getDisplayRows();
-      const start = (state.currentPage - 1) * state.pageSize;
-      const pageRows = displayRows.slice(start, start + state.pageSize);
-      const columns = [
+    const columnToNumber = (column) => {
+      return column.split('').reduce((acc, char) => acc * 26 + char.charCodeAt(0) - 64, 0);
+    };
+
+    const numberToColumn = (number) => {
+      let value = number;
+      let column = '';
+      while (value > 0) {
+        const remainder = (value - 1) % 26;
+        column = String.fromCharCode(65 + remainder) + column;
+        value = Math.floor((value - 1) / 26);
+      }
+      return column;
+    };
+
+    const generateColumnRange = (start, end) => {
+      const startValue = columnToNumber(start);
+      const endValue = columnToNumber(end);
+      const columns = [];
+      for (let i = startValue; i <= endValue; i += 1) {
+        columns.push(numberToColumn(i));
+      }
+      return columns;
+    };
+
+    const getColumnLabel = (key) => state.headerMap[key] || key;
+
+    const getColumns = () => {
+      const columnKeys = [
         'CAT',
         'SKU PLAIN',
         'LO-1',
+        ...generateColumnRange('O', 'DE'),
         'DEC-25 REVENUE',
         'DEC-25 ADVT SPEND',
         '% of Revenue (Spend)',
@@ -760,45 +783,55 @@
         'Signal 2025',
         'Action 2025'
       ];
+      return columnKeys.map((key) => ({ key, label: getColumnLabel(key) }));
+    };
+
+    const renderTable = () => {
+      const tableHead = document.getElementById('tableHead');
+      const tableBody = document.getElementById('tableBody');
+      const displayRows = getDisplayRows();
+      const start = (state.currentPage - 1) * state.pageSize;
+      const pageRows = displayRows.slice(start, start + state.pageSize);
+      const columns = getColumns();
       const columnAlignments = getColumnAlignments(columns, state.rows);
 
       tableHead.innerHTML = '';
-      columns.forEach((key, index) => {
+      columns.forEach((column, index) => {
         const th = document.createElement('th');
-        th.textContent = key;
+        th.textContent = column.label;
         th.dataset.colIndex = String(index);
-        th.classList.add(columnAlignments[key]);
-        th.addEventListener('click', () => sortRows(key));
+        th.classList.add(columnAlignments[column.key]);
+        th.addEventListener('click', () => sortRows(column.key));
         tableHead.appendChild(th);
       });
 
       tableBody.innerHTML = '';
       pageRows.forEach((row) => {
         const tr = document.createElement('tr');
-        columns.forEach((key, index) => {
+        columns.forEach((column, index) => {
           const td = document.createElement('td');
           td.dataset.colIndex = String(index);
-          td.classList.add(columnAlignments[key]);
-          if (key.includes('Signal')) {
+          td.classList.add(columnAlignments[column.key]);
+          if (column.label.includes('Signal')) {
             const pill = document.createElement('span');
-            const value = row[key] || '-';
+            const value = row[column.key] || '-';
             pill.textContent = value;
             pill.className = `pill ${getSignalPillClass(value)}`;
             td.appendChild(pill);
-          } else if (key.includes('Action')) {
+          } else if (column.label.includes('Action')) {
             const pill = document.createElement('span');
-            const value = row[key] || '-';
+            const value = row[column.key] || '-';
             pill.textContent = value;
             pill.className = `pill ${getActionPillClass(value)}`;
             td.appendChild(pill);
-          } else if (typeof row[key] === 'number') {
-            if (key.includes('%')) {
-              td.textContent = formatPercent(row[key], { assumeRatio: true });
+          } else if (typeof row[column.key] === 'number') {
+            if (column.label.includes('%')) {
+              td.textContent = formatPercent(row[column.key], { assumeRatio: true });
             } else {
-              td.textContent = formatCurrency(row[key]);
+              td.textContent = formatCurrency(row[column.key]);
             }
           } else {
-            td.textContent = row[key] || '-';
+            td.textContent = row[column.key] || '-';
           }
           tr.appendChild(td);
         });
@@ -815,10 +848,10 @@
       const alignments = {};
       columns.forEach((column) => {
         const values = rows
-          .map((row) => row[column])
+          .map((row) => row[column.key])
           .filter((value) => value !== null && value !== undefined);
         const isNumeric = values.length > 0 && values.every((value) => isNumericValue(value));
-        alignments[column] = isNumeric ? 'align-right' : 'align-center';
+        alignments[column.key] = isNumeric ? 'align-right' : 'align-center';
       });
       return alignments;
     };
@@ -865,25 +898,11 @@
     };
 
     const downloadCsv = () => {
-      const headers = [
-        'CAT',
-        'SKU PLAIN',
-        'LO-1',
-        'DEC-25 REVENUE',
-        'DEC-25 ADVT SPEND',
-        '% of Revenue (Spend)',
-        'Signal(AMZ)',
-        'Action(AMZ)',
-        'REVENUE 2025',
-        'ADVT SPEND 2025',
-        '% of Revenue 2025',
-        'Signal 2025',
-        'Action 2025'
-      ];
-      const lines = [headers.join(',')];
+      const columns = getColumns();
+      const lines = [columns.map((column) => column.label).join(',')];
       state.filtered.forEach((row) => {
-        const line = headers.map((header) => {
-          const value = row[header] ?? '';
+        const line = columns.map((column) => {
+          const value = row[column.key] ?? '';
           return `"${String(value).replace(/"/g, '""')}"`;
         });
         lines.push(line.join(','));
