@@ -383,7 +383,7 @@
             </select>
             <input id="rankCount" type="number" min="1" step="1" placeholder="Count" aria-label="Number of records" />
           </div>
-          <button class="btn btn-outline" id="viewToggle" type="button">Graph View</button>
+          <button class="btn btn-outline" id="viewToggle" type="button">Table View</button>
           <button class="btn btn-outline" id="downloadCsv">Download CSV</button>
         </div>
       </div>
@@ -891,7 +891,7 @@
       const isTableView = view === 'table';
       tableContent.classList.toggle('is-hidden', !isTableView);
       chartSection.classList.toggle('is-hidden', isTableView);
-      viewToggle.textContent = isTableView ? 'Graph View' : 'Table View';
+      viewToggle.textContent = isTableView ? 'Table View' : 'Graph View';
     };
 
     viewToggle.addEventListener('click', () => {
