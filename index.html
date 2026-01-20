@@ -213,6 +213,14 @@
       font-size: 13px;
     }
 
+    .align-right {
+      text-align: right;
+    }
+
+    .align-center {
+      text-align: center;
+    }
+
     tbody tr:hover td {
       background: var(--table-hover-row);
     }
@@ -743,12 +751,14 @@
         'Signal 2025',
         'Action 2025'
       ];
+      const columnAlignments = getColumnAlignments(columns, state.rows);
 
       tableHead.innerHTML = '';
       columns.forEach((key, index) => {
         const th = document.createElement('th');
         th.textContent = key;
         th.dataset.colIndex = String(index);
+        th.classList.add(columnAlignments[key]);
         th.addEventListener('click', () => sortRows(key));
         tableHead.appendChild(th);
       });
@@ -759,6 +769,7 @@
         columns.forEach((key, index) => {
           const td = document.createElement('td');
           td.dataset.colIndex = String(index);
+          td.classList.add(columnAlignments[key]);
           if (key.includes('Signal')) {
             const pill = document.createElement('span');
             const value = row[key] || '-';
@@ -787,6 +798,20 @@
 
       document.getElementById('rowCount').textContent = `${displayRows.length} rows`;
       renderPagination(displayRows.length);
+    };
+
+    const isNumericValue = (value) => typeof value === 'number' && Number.isFinite(value);
+
+    const getColumnAlignments = (columns, rows) => {
+      const alignments = {};
+      columns.forEach((column) => {
+        const values = rows
+          .map((row) => row[column])
+          .filter((value) => value !== null && value !== undefined);
+        const isNumeric = values.length > 0 && values.every((value) => isNumericValue(value));
+        alignments[column] = isNumeric ? 'align-right' : 'align-center';
+      });
+      return alignments;
     };
 
     const sortRows = (key, dir = null, update = true) => {
