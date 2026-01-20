@@ -535,11 +535,87 @@
       return updated;
     };
 
+    const MONTHLY_COLUMN_CODES = [
+      'O', 'Q', 'S',
+      'X', 'Z', 'AB',
+      'AG', 'AI', 'AK',
+      'AP', 'AR', 'AT',
+      'AY', 'BA', 'BC',
+      'BH', 'BJ', 'BL',
+      'BQ', 'BS', 'BU',
+      'BZ', 'CB', 'CD',
+      'CI', 'CK', 'CM',
+      'CR', 'CT', 'CV',
+      'DA', 'DC', 'DE'
+    ];
+
+    const MONTHLY_PERCENT_MONTHS = {
+      S: 'JAN-25',
+      AB: 'FEB-25',
+      AK: 'MAR-25',
+      AT: 'APR-25',
+      BC: 'MAY-25',
+      BL: 'JUN-25',
+      BU: 'JUL-25',
+      CD: 'AUG-25',
+      CM: 'SEP-25',
+      CV: 'OCT-25',
+      DE: 'NOV-25'
+    };
+
+    const buildMonthlyColumns = (payload) => {
+      const headerByCode = new Map((payload.columns || []).map((column) => [column.code, column.header]));
+      return MONTHLY_COLUMN_CODES.map((code) => {
+        const header = headerByCode.get(code) || code;
+        if (header === '% of Revenue (Spend)') {
+          const monthLabel = MONTHLY_PERCENT_MONTHS[code] || code;
+          return { code, header, key: `${monthLabel} % of Revenue (Spend)` };
+        }
+        return { code, header, key: header };
+      });
+    };
+
+    const buildMonthlyIndex = (payload) => {
+      const monthlyRows = payload.rows || [];
+      const index = new Map();
+      monthlyRows.forEach((row) => {
+        const sku = row.B || row['SKU PLAIN'];
+        if (!sku) return;
+        index.set(sku, row);
+      });
+      return index;
+    };
+
+    const mergeMonthlyRows = (rows, monthlyIndex, monthlyColumns) => rows.map((row) => {
+      const sku = row['SKU PLAIN'];
+      if (!sku) return row;
+      const monthlyRow = monthlyIndex.get(sku);
+      if (!monthlyRow) return row;
+      const merged = { ...row };
+      monthlyColumns.forEach(({ code, key }) => {
+        if (monthlyRow[code] !== undefined) {
+          merged[key] = monthlyRow[code];
+        }
+      });
+      return merged;
+    });
+
     const loadData = async () => {
-      const response = await fetch('data.json');
-      const payload = await response.json();
+      const [primaryResponse, monthlyResponse] = await Promise.all([
+        fetch('data.json'),
+        fetch('data-monthly.json')
+      ]);
+      const [payload, monthlyPayload] = await Promise.all([
+        primaryResponse.json(),
+        monthlyResponse.json()
+      ]);
+      const monthlyColumns = buildMonthlyColumns(monthlyPayload);
+      const monthlyIndex = buildMonthlyIndex(monthlyPayload);
       state.headers = Object.values(payload.headers);
-      state.rows = applyLo1Lookup(payload.rows || [], payload.lookup?.lo1BySku);
+      state.rows = applyLo1Lookup(
+        mergeMonthlyRows(payload.rows || [], monthlyIndex, monthlyColumns),
+        payload.lookup?.lo1BySku
+      );
       initializeFilters();
       applyFilters();
     };
