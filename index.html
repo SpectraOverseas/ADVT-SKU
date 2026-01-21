@@ -186,8 +186,26 @@
       min-width: 240px;
     }
 
-    .filter-group select[multiple] {
-      min-height: 120px;
+    .table-month-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .table-month-filter select {
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 12px;
+      text-transform: none;
+      color: var(--text);
     }
 
     .table-limit-controls {
@@ -342,11 +360,6 @@
           <select id="actionFilter"></select>
         </div>
         <div class="filter-group">
-          <label for="monthFilter">Month</label>
-          <select id="monthFilter" aria-label="Month filter" multiple></select>
-          <div class="muted">Hold Ctrl/Cmd to select multiple</div>
-        </div>
-        <div class="filter-group">
           <label for="searchInput">Search SKU</label>
           <input id="searchInput" type="search" placeholder="Search SKU" />
         </div>
@@ -409,6 +422,10 @@
           <div>
             <strong>SKU Detail Table</strong>
             <div class="muted" id="rowCount">0 rows</div>
+          </div>
+          <div class="table-month-filter">
+            <label for="monthFilter">Month</label>
+            <select id="monthFilter" aria-label="Month filter" multiple></select>
           </div>
         </div>
         <div class="filter-actions">
