@@ -128,13 +128,15 @@
       top: calc(100% + 6px);
       left: 0;
       right: 0;
+      width: 100%;
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 12px;
       box-shadow: 0 12px 24px rgba(15, 38, 78, 0.12);
-      padding: 8px;
-      max-height: 240px;
+      padding: 4px;
+      max-height: 220px;
       overflow-y: auto;
+      scroll-behavior: smooth;
       z-index: 20;
       display: none;
     }
@@ -146,15 +148,20 @@
     .filter-group .multi-select-option {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 8px 10px;
+      gap: 8px;
+      padding: 6px 8px;
       border-radius: 8px;
       font-size: 13px;
       cursor: pointer;
+      line-height: 1.2;
     }
 
     .filter-group .multi-select-option input {
       margin: 0;
+    }
+
+    .filter-group .multi-select-option span {
+      white-space: nowrap;
     }
 
     .filter-group .multi-select-option:hover {
