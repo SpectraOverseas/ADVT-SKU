@@ -83,74 +83,18 @@
     }
 
     .filter-group select,
-    .filter-group input,
-    .filter-group .multi-select__trigger {
+    .filter-group input {
       width: 100%;
       padding: 10px 12px;
       border-radius: 10px;
       border: 1px solid var(--border);
       background: #fff;
       font-size: 14px;
-      text-align: left;
     }
 
     .filter-group select[multiple] {
       min-height: 44px;
       padding-right: 6px;
-    }
-
-    .multi-select {
-      position: relative;
-    }
-
-    .multi-select__trigger {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      cursor: pointer;
-    }
-
-    .multi-select__trigger::after {
-      content: "▾";
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .multi-select__menu {
-      position: absolute;
-      inset: calc(100% + 6px) 0 auto 0;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 12px 24px rgba(15, 38, 78, 0.12);
-      padding: 8px;
-      max-height: 220px;
-      overflow-y: auto;
-      display: none;
-      z-index: 10;
-    }
-
-    .multi-select.is-open .multi-select__menu {
-      display: block;
-    }
-
-    .multi-select__option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 8px;
-      border-radius: 8px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .multi-select__option:hover {
-      background: #f1f5f9;
-    }
-
-    .multi-select__option input {
-      margin: 0;
     }
 
     .filter-actions {
@@ -400,18 +344,7 @@
         </div>
         <div class="filter-group">
           <label for="monthFilter">Month</label>
-          <div class="multi-select" id="monthFilter">
-            <button
-              class="multi-select__trigger"
-              id="monthFilterTrigger"
-              type="button"
-              aria-haspopup="listbox"
-              aria-expanded="false"
-            >
-              All
-            </button>
-            <div class="multi-select__menu" id="monthFilterMenu" role="listbox" aria-multiselectable="true"></div>
-          </div>
+          <select id="monthFilter" aria-label="Month filter" multiple></select>
         </div>
         <div class="filter-group">
           <label for="searchInput">Search SKU</label>
@@ -515,7 +448,7 @@
       sortDir: 'desc',
       rankMode: 'top',
       rankCount: null,
-      selectedMonths: ['ALL']
+      selectedMonths: ['JAN']
     };
 
     const formatCurrency = (value) => {
@@ -667,7 +600,6 @@
       const signal = document.getElementById('signalFilter').value;
       const action = document.getElementById('actionFilter').value;
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
-      const { selectedMonths, isAllSelected } = getMonthSelectionState();
 
       state.filtered = state.rows.filter((row) => {
         if (category && row['CAT'] !== category) return false;
@@ -678,14 +610,6 @@
         if (signal && row['Signal 2025'] !== signal) return false;
         if (action && row['Action 2025'] !== action) return false;
         if (search && !String(row['SKU PLAIN']).toLowerCase().includes(search)) return false;
-        if (!isAllSelected && selectedMonths.length) {
-          const matchesMonth = selectedMonths.some((month) => {
-            const keys = monthColumnKeyMap[month];
-            if (!keys) return false;
-            return safeNumber(row[keys.revenue]) > 0 || safeNumber(row[keys.spend]) > 0;
-          });
-          if (!matchesMonth) return false;
-        }
         return true;
       });
 
@@ -704,7 +628,6 @@
       document.getElementById('signalFilter').value = '';
       document.getElementById('actionFilter').value = '';
       document.getElementById('searchInput').value = '';
-      setMonthSelection(['ALL']);
       applyFilters();
     };
 
@@ -929,7 +852,7 @@
     ];
 
     const monthOptions = [
-      { value: 'ALL', label: 'All' },
+      { value: 'ALL', label: 'ALL' },
       { value: 'JAN', label: 'JAN-25' },
       { value: 'FEB', label: 'FEB-25' },
       { value: 'MAR', label: 'MAR-25' },
@@ -1016,58 +939,15 @@
       share: 'TOTAL_%_OF_REVENUE'
     };
 
-    const monthSelect = {
-      container: document.getElementById('monthFilter'),
-      trigger: document.getElementById('monthFilterTrigger'),
-      menu: document.getElementById('monthFilterMenu')
-    };
-
-    const selectableMonths = monthOptions.filter((option) => option.value !== 'ALL');
-
-    const updateMonthTriggerLabel = () => {
-      const { selectedMonths, isAllSelected } = getMonthSelectionState();
-      if (isAllSelected || selectedMonths.length === selectableMonths.length) {
-        monthSelect.trigger.textContent = 'All';
-        return;
-      }
-      const label = selectedMonths.map((month) => getMonthLabel(month)).join(', ');
-      monthSelect.trigger.textContent = label || 'All';
-    };
-
-    const setMonthSelection = (months) => {
-      state.selectedMonths = months.length ? months : ['ALL'];
-      localStorage.setItem(monthStorageKey, JSON.stringify(state.selectedMonths));
-      updateMonthFilterUI();
-    };
-
-    const updateMonthFilterUI = () => {
-      const { selectedMonths, isAllSelected } = getMonthSelectionState();
-      const options = Array.from(monthSelect.menu.querySelectorAll('input[type="checkbox"]'));
-      options.forEach((checkbox) => {
-        if (checkbox.value === 'ALL') {
-          checkbox.checked = isAllSelected;
-          return;
-        }
-        checkbox.checked = !isAllSelected && selectedMonths.includes(checkbox.value);
-      });
-      updateMonthTriggerLabel();
-    };
-
     const initializeMonthFilter = () => {
-      monthSelect.menu.innerHTML = '';
+      const monthFilter = document.getElementById('monthFilter');
+      monthFilter.innerHTML = '';
       monthOptions.forEach((option) => {
-        const wrapper = document.createElement('label');
-        wrapper.className = 'multi-select__option';
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = option.value;
-        const text = document.createElement('span');
-        text.textContent = option.label;
-        wrapper.appendChild(checkbox);
-        wrapper.appendChild(text);
-        monthSelect.menu.appendChild(wrapper);
+        const opt = document.createElement('option');
+        opt.value = option.value;
+        opt.textContent = option.label;
+        monthFilter.appendChild(opt);
       });
-
       const storedMonths = localStorage.getItem(monthStorageKey);
       let parsed = null;
       if (storedMonths) {
@@ -1080,8 +960,11 @@
       const validMonths = Array.isArray(parsed)
         ? parsed.filter((month) => monthOptions.some((option) => option.value === month))
         : [];
-      const defaultMonths = validMonths.length ? validMonths : ['ALL'];
-      setMonthSelection(defaultMonths.includes('ALL') ? ['ALL'] : defaultMonths);
+      const defaultMonths = validMonths.length ? validMonths : ['JAN'];
+      state.selectedMonths = defaultMonths.includes('ALL') ? ['ALL'] : defaultMonths;
+      Array.from(monthFilter.options).forEach((option) => {
+        option.selected = state.selectedMonths.includes(option.value);
+      });
     };
 
     const isMonthColumnKey = (key) => key === '% of Revenue (Spend)' || monthRegex.test(key);
@@ -1092,7 +975,7 @@
     };
 
     const getMonthSelectionState = () => {
-      const selectedMonths = state.selectedMonths.length ? state.selectedMonths : ['ALL'];
+      const selectedMonths = state.selectedMonths.length ? state.selectedMonths : ['JAN'];
       const isAllSelected = selectedMonths.includes('ALL');
       const isSingleMonth = selectedMonths.length === 1 && !isAllSelected;
       const isMultiMonth = selectedMonths.length > 1 && !isAllSelected;
@@ -1115,19 +998,52 @@
     };
 
     const getVisibleColumns = () => {
-      const suffix = getAggregateLabelSuffix();
-      return tableColumns.map((column) => {
-        if (column.key === totalColumnKeys.revenue) {
-          return { ...column, label: `TOTAL REVENUE (${suffix})` };
-        }
-        if (column.key === totalColumnKeys.spend) {
-          return { ...column, label: `TOTAL AD SPEND (${suffix})` };
-        }
-        if (column.key === totalColumnKeys.share) {
-          return { ...column, label: `TOTAL % OF REVENUE (${suffix})` };
-        }
-        return column;
-      });
+      const { isSingleMonth, isMultiMonth, isAllSelected, selectedMonths } = getMonthSelectionState();
+      if (isSingleMonth) {
+        const selectedMonth = selectedMonths[0];
+        const selectedKeys = monthColumnKeyMap[selectedMonth] || monthColumnKeyMap.JAN;
+        return tableColumns.filter(({ key }) => {
+          if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
+          if (Object.values(selectedKeys).includes(key)) return true;
+          if (isMonthColumnKey(key)) return false;
+          if (Object.values(totalColumnKeys).includes(key)) return false;
+          return true;
+        }).map((column) => {
+          if (column.key === selectedKeys.revenue) {
+            return { ...column, label: `${getMonthLabel(selectedMonth)} REVENUE` };
+          }
+          if (column.key === selectedKeys.spend) {
+            return { ...column, label: `${getMonthLabel(selectedMonth)} ADVT SPEND` };
+          }
+          if (column.key === selectedKeys.share) {
+            return { ...column, label: `${getMonthLabel(selectedMonth)} % OF REVENUE` };
+          }
+          return column;
+        });
+      }
+
+      if (isMultiMonth || isAllSelected) {
+        const suffix = getAggregateLabelSuffix();
+        return tableColumns.filter(({ key }) => {
+          if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
+          if (isMonthColumnKey(key)) return false;
+          if (Object.values(totalColumnKeys).includes(key)) return true;
+          return !Object.values(totalColumnKeys).includes(key);
+        }).map((column) => {
+          if (column.key === totalColumnKeys.revenue) {
+            return { ...column, label: `TOTAL REVENUE (${suffix})` };
+          }
+          if (column.key === totalColumnKeys.spend) {
+            return { ...column, label: `TOTAL AD SPEND (${suffix})` };
+          }
+          if (column.key === totalColumnKeys.share) {
+            return { ...column, label: `TOTAL % OF REVENUE (${suffix})` };
+          }
+          return column;
+        });
+      }
+
+      return tableColumns;
     };
 
     const renderTable = () => {
@@ -1276,41 +1192,17 @@
     document.getElementById('searchInput').addEventListener('input', applyFilters);
     document.getElementById('resetFilters').addEventListener('click', resetFilters);
     document.getElementById('downloadCsv').addEventListener('click', downloadCsv);
-    monthSelect.trigger.addEventListener('click', () => {
-      const isOpen = monthSelect.container.classList.toggle('is-open');
-      monthSelect.trigger.setAttribute('aria-expanded', String(isOpen));
-    });
-
-    monthSelect.menu.addEventListener('change', (event) => {
-      if (!(event.target instanceof HTMLInputElement)) return;
-      const { value, checked } = event.target;
-      if (value === 'ALL') {
-        setMonthSelection(checked ? ['ALL'] : selectableMonths.map((option) => option.value));
-        applyFilters();
-        return;
+    document.getElementById('monthFilter').addEventListener('change', (event) => {
+      const selected = Array.from(event.target.selectedOptions).map((option) => option.value);
+      state.selectedMonths = selected.length ? selected : ['JAN'];
+      if (state.selectedMonths.includes('ALL')) {
+        state.selectedMonths = ['ALL'];
+        Array.from(event.target.options).forEach((option) => {
+          option.selected = option.value === 'ALL';
+        });
       }
-      const current = new Set(state.selectedMonths.filter((month) => month !== 'ALL'));
-      if (checked) {
-        current.add(value);
-      } else {
-        current.delete(value);
-      }
-      const selected = Array.from(current);
-      if (selected.length === selectableMonths.length) {
-        setMonthSelection(['ALL']);
-      } else if (selected.length === 0) {
-        setMonthSelection(['ALL']);
-      } else {
-        setMonthSelection(selected);
-      }
-      applyFilters();
-    });
-
-    document.addEventListener('click', (event) => {
-      if (!monthSelect.container.contains(event.target)) {
-        monthSelect.container.classList.remove('is-open');
-        monthSelect.trigger.setAttribute('aria-expanded', 'false');
-      }
+      localStorage.setItem(monthStorageKey, JSON.stringify(state.selectedMonths));
+      renderTable();
     });
     document.getElementById('rankDirection').addEventListener('change', (event) => {
       state.rankMode = event.target.value;
