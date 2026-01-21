@@ -425,7 +425,7 @@
           </div>
           <div class="table-month-filter">
             <label for="monthFilter">Month</label>
-            <select id="monthFilter" aria-label="Month filter"></select>
+            <select id="monthFilter" aria-label="Month filter" multiple></select>
           </div>
         </div>
         <div class="filter-actions">
@@ -465,7 +465,7 @@
       sortDir: 'desc',
       rankMode: 'top',
       rankCount: null,
-      selectedMonth: 'JAN'
+      selectedMonths: ['JAN']
     };
 
     const formatCurrency = (value) => {
@@ -767,11 +767,32 @@
       });
     };
 
+    const getRowValue = (row, key) => {
+      if (Object.values(totalColumnKeys).includes(key)) {
+        const { monthsForTotal } = getMonthSelectionState();
+        const totals = monthsForTotal.reduce(
+          (acc, month) => {
+            const monthKeys = monthColumnKeyMap[month];
+            if (!monthKeys) return acc;
+            acc.revenue += safeNumber(row[monthKeys.revenue]);
+            acc.spend += safeNumber(row[monthKeys.spend]);
+            return acc;
+          },
+          { revenue: 0, spend: 0 }
+        );
+        const share = totals.revenue ? (totals.spend / totals.revenue) * 100 : 0;
+        if (key === totalColumnKeys.revenue) return totals.revenue;
+        if (key === totalColumnKeys.spend) return totals.spend;
+        return share;
+      }
+      return row[key];
+    };
+
     const topBottomMetric = 'REVENUE 2025';
 
     const sortRowsArray = (rows, key, direction) => rows.sort((a, b) => {
-      const aVal = a[key];
-      const bVal = b[key];
+      const aVal = getRowValue(a, key);
+      const bVal = getRowValue(b, key);
       if (typeof aVal === 'number' && typeof bVal === 'number') {
         return (aVal - bVal) * direction;
       }
@@ -782,7 +803,7 @@
       let rows = state.filtered;
       if (state.rankCount) {
         const direction = state.rankMode === 'bottom' ? 1 : -1;
-        rows = rows.filter((row) => isNumericValue(row[topBottomMetric]));
+        rows = rows.filter((row) => isNumericValue(getRowValue(row, topBottomMetric)));
         rows = [...rows];
         sortRowsArray(rows, topBottomMetric, direction);
         rows = rows.slice(0, state.rankCount);
@@ -799,6 +820,9 @@
       { key: 'CAT', label: 'CAT' },
       { key: 'SKU PLAIN', label: 'SKU PLAIN' },
       { key: 'LO-1', label: 'LO-1' },
+      { key: 'TOTAL_REVENUE', label: 'TOTAL REVENUE' },
+      { key: 'TOTAL_AD_SPEND', label: 'TOTAL AD SPEND' },
+      { key: 'TOTAL_%_OF_REVENUE', label: 'TOTAL % OF REVENUE' },
       { key: 'JAN-25 REVENUE', label: 'JAN-25 REVENUE' },
       { key: 'JAN-25 ADVT SPEND', label: 'JAN-25 ADVT SPEND' },
       { key: 'JAN-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
@@ -845,6 +869,7 @@
     ];
 
     const monthOptions = [
+      { value: 'ALL', label: 'ALL' },
       { value: 'JAN', label: 'JAN-25' },
       { value: 'FEB', label: 'FEB-25' },
       { value: 'MAR', label: 'MAR-25' },
@@ -860,7 +885,7 @@
     ];
 
     const monthStorageKey = 'skuWiseSelectedMonth';
-    const monthRegex = new RegExp(`^(${monthOptions.map((option) => option.value).join('|')})-25 `);
+    const monthRegex = new RegExp(`^(${monthOptions.filter((option) => option.value !== 'ALL').map((option) => option.value).join('|')})-25 `);
 
     const monthColumnKeyMap = {
       JAN: {
@@ -925,6 +950,12 @@
       }
     };
 
+    const totalColumnKeys = {
+      revenue: 'TOTAL_REVENUE',
+      spend: 'TOTAL_AD_SPEND',
+      share: 'TOTAL_%_OF_REVENUE'
+    };
+
     const initializeMonthFilter = () => {
       const monthFilter = document.getElementById('monthFilter');
       monthFilter.innerHTML = '';
@@ -934,23 +965,102 @@
         opt.textContent = option.label;
         monthFilter.appendChild(opt);
       });
-      const storedMonth = localStorage.getItem(monthStorageKey);
-      const defaultMonth = monthOptions.some((option) => option.value === storedMonth) ? storedMonth : 'JAN';
-      state.selectedMonth = defaultMonth;
-      monthFilter.value = defaultMonth;
+      const storedMonths = localStorage.getItem(monthStorageKey);
+      let parsed = null;
+      if (storedMonths) {
+        try {
+          parsed = JSON.parse(storedMonths);
+        } catch (error) {
+          parsed = [storedMonths];
+        }
+      }
+      const validMonths = Array.isArray(parsed)
+        ? parsed.filter((month) => monthOptions.some((option) => option.value === month))
+        : [];
+      const defaultMonths = validMonths.length ? validMonths : ['JAN'];
+      state.selectedMonths = defaultMonths.includes('ALL') ? ['ALL'] : defaultMonths;
+      Array.from(monthFilter.options).forEach((option) => {
+        option.selected = state.selectedMonths.includes(option.value);
+      });
     };
 
     const isMonthColumnKey = (key) => key === '% of Revenue (Spend)' || monthRegex.test(key);
 
+    const getMonthLabel = (monthValue) => {
+      const option = monthOptions.find((item) => item.value === monthValue);
+      return option ? option.label : monthValue;
+    };
+
+    const getMonthSelectionState = () => {
+      const selectedMonths = state.selectedMonths.length ? state.selectedMonths : ['JAN'];
+      const isAllSelected = selectedMonths.includes('ALL');
+      const isSingleMonth = selectedMonths.length === 1 && !isAllSelected;
+      const isMultiMonth = selectedMonths.length > 1 && !isAllSelected;
+      const monthsForTotal = isAllSelected
+        ? monthOptions.filter((option) => option.value !== 'ALL').map((option) => option.value)
+        : selectedMonths;
+      return {
+        selectedMonths,
+        isAllSelected,
+        isSingleMonth,
+        isMultiMonth,
+        monthsForTotal
+      };
+    };
+
+    const getAggregateLabelSuffix = () => {
+      const { selectedMonths, isAllSelected } = getMonthSelectionState();
+      if (isAllSelected) return 'ALL MONTHS';
+      return selectedMonths.map((month) => getMonthLabel(month)).join(', ');
+    };
+
     const getVisibleColumns = () => {
-      const selected = monthColumnKeyMap[state.selectedMonth] || monthColumnKeyMap.JAN;
-      const selectedKeys = new Set(Object.values(selected));
-      return tableColumns.filter(({ key }) => {
-        if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
-        if (selectedKeys.has(key)) return true;
-        if (isMonthColumnKey(key)) return false;
-        return true;
-      });
+      const { isSingleMonth, isMultiMonth, isAllSelected, selectedMonths } = getMonthSelectionState();
+      if (isSingleMonth) {
+        const selectedMonth = selectedMonths[0];
+        const selectedKeys = monthColumnKeyMap[selectedMonth] || monthColumnKeyMap.JAN;
+        return tableColumns.filter(({ key }) => {
+          if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
+          if (Object.values(selectedKeys).includes(key)) return true;
+          if (isMonthColumnKey(key)) return false;
+          if (Object.values(totalColumnKeys).includes(key)) return false;
+          return true;
+        }).map((column) => {
+          if (column.key === selectedKeys.revenue) {
+            return { ...column, label: `${getMonthLabel(selectedMonth)} REVENUE` };
+          }
+          if (column.key === selectedKeys.spend) {
+            return { ...column, label: `${getMonthLabel(selectedMonth)} ADVT SPEND` };
+          }
+          if (column.key === selectedKeys.share) {
+            return { ...column, label: `${getMonthLabel(selectedMonth)} % OF REVENUE` };
+          }
+          return column;
+        });
+      }
+
+      if (isMultiMonth || isAllSelected) {
+        const suffix = getAggregateLabelSuffix();
+        return tableColumns.filter(({ key }) => {
+          if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
+          if (isMonthColumnKey(key)) return false;
+          if (Object.values(totalColumnKeys).includes(key)) return true;
+          return !Object.values(totalColumnKeys).includes(key);
+        }).map((column) => {
+          if (column.key === totalColumnKeys.revenue) {
+            return { ...column, label: `TOTAL REVENUE (${suffix})` };
+          }
+          if (column.key === totalColumnKeys.spend) {
+            return { ...column, label: `TOTAL AD SPEND (${suffix})` };
+          }
+          if (column.key === totalColumnKeys.share) {
+            return { ...column, label: `TOTAL % OF REVENUE (${suffix})` };
+          }
+          return column;
+        });
+      }
+
+      return tableColumns;
     };
 
     const renderTable = () => {
@@ -991,14 +1101,17 @@
             pill.textContent = value;
             pill.className = `pill ${getActionPillClass(value)}`;
             td.appendChild(pill);
-          } else if (typeof row[key] === 'number') {
-            if (key.includes('%')) {
-              td.textContent = formatPercent(row[key], { assumeRatio: true });
-            } else {
-              td.textContent = formatCurrency(row[key]);
-            }
           } else {
-            td.textContent = row[key] || '-';
+            const cellValue = getRowValue(row, key);
+            if (typeof cellValue === 'number') {
+              if (key.includes('%')) {
+                td.textContent = formatPercent(cellValue, { assumeRatio: true });
+              } else {
+                td.textContent = formatCurrency(cellValue);
+              }
+            } else {
+              td.textContent = cellValue || '-';
+            }
           }
           tr.appendChild(td);
         });
@@ -1014,6 +1127,10 @@
     const getColumnAlignments = (columns, rows) => {
       const alignments = {};
       columns.forEach(({ key }) => {
+        if (Object.values(totalColumnKeys).includes(key)) {
+          alignments[key] = 'align-right';
+          return;
+        }
         const values = rows
           .map((row) => row[key])
           .filter((value) => value !== null && value !== undefined);
@@ -1069,7 +1186,7 @@
       const lines = [visibleColumns.map(({ label }) => label).join(',')];
       state.filtered.forEach((row) => {
         const line = visibleColumns.map(({ key }) => {
-          const value = row[key] ?? '';
+          const value = getRowValue(row, key) ?? '';
           return `"${String(value).replace(/"/g, '""')}"`;
         });
         lines.push(line.join(','));
@@ -1093,8 +1210,15 @@
     document.getElementById('resetFilters').addEventListener('click', resetFilters);
     document.getElementById('downloadCsv').addEventListener('click', downloadCsv);
     document.getElementById('monthFilter').addEventListener('change', (event) => {
-      state.selectedMonth = event.target.value;
-      localStorage.setItem(monthStorageKey, state.selectedMonth);
+      const selected = Array.from(event.target.selectedOptions).map((option) => option.value);
+      state.selectedMonths = selected.length ? selected : ['JAN'];
+      if (state.selectedMonths.includes('ALL')) {
+        state.selectedMonths = ['ALL'];
+        Array.from(event.target.options).forEach((option) => {
+          option.selected = option.value === 'ALL';
+        });
+      }
+      localStorage.setItem(monthStorageKey, JSON.stringify(state.selectedMonths));
       renderTable();
     });
     document.getElementById('rankDirection').addEventListener('change', (event) => {
