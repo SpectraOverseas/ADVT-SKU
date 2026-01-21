@@ -97,6 +97,65 @@
       padding-right: 6px;
     }
 
+    .filter-group .multi-select {
+      position: relative;
+    }
+
+    .filter-group .multi-select-trigger {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .filter-group .multi-select-trigger::after {
+      content: "▾";
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .filter-group .multi-select-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 24px rgba(15, 38, 78, 0.12);
+      padding: 8px;
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 20;
+      display: none;
+    }
+
+    .filter-group .multi-select.is-open .multi-select-menu {
+      display: block;
+    }
+
+    .filter-group .multi-select-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .filter-group .multi-select-option:hover {
+      background: #f1f5f9;
+    }
+
     .filter-actions {
       display: flex;
       align-items: flex-end;
@@ -344,7 +403,12 @@
         </div>
         <div class="filter-group">
           <label for="monthFilter">Month</label>
-          <select id="monthFilter" aria-label="Month filter" multiple></select>
+          <div class="multi-select" id="monthFilter">
+            <button class="multi-select-trigger" type="button" id="monthFilterTrigger" aria-haspopup="listbox" aria-expanded="false">
+              All months
+            </button>
+            <div class="multi-select-menu" id="monthFilterMenu" role="listbox" aria-multiselectable="true"></div>
+          </div>
         </div>
         <div class="filter-group">
           <label for="searchInput">Search SKU</label>
@@ -448,7 +512,7 @@
       sortDir: 'desc',
       rankMode: 'top',
       rankCount: null,
-      selectedMonths: ['JAN']
+      selectedMonths: ['ALL']
     };
 
     const formatCurrency = (value) => {
@@ -941,13 +1005,8 @@
 
     const initializeMonthFilter = () => {
       const monthFilter = document.getElementById('monthFilter');
-      monthFilter.innerHTML = '';
-      monthOptions.forEach((option) => {
-        const opt = document.createElement('option');
-        opt.value = option.value;
-        opt.textContent = option.label;
-        monthFilter.appendChild(opt);
-      });
+      const monthMenu = document.getElementById('monthFilterMenu');
+      monthMenu.innerHTML = '';
       const storedMonths = localStorage.getItem(monthStorageKey);
       let parsed = null;
       if (storedMonths) {
@@ -960,11 +1019,24 @@
       const validMonths = Array.isArray(parsed)
         ? parsed.filter((month) => monthOptions.some((option) => option.value === month))
         : [];
-      const defaultMonths = validMonths.length ? validMonths : ['JAN'];
+      const defaultMonths = validMonths.length ? validMonths : ['ALL'];
       state.selectedMonths = defaultMonths.includes('ALL') ? ['ALL'] : defaultMonths;
-      Array.from(monthFilter.options).forEach((option) => {
-        option.selected = state.selectedMonths.includes(option.value);
+      monthOptions.forEach((option) => {
+        const wrapper = document.createElement('label');
+        wrapper.className = 'multi-select-option';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = option.value;
+        checkbox.checked = state.selectedMonths.includes(option.value);
+        const text = document.createElement('span');
+        text.textContent = option.label;
+        wrapper.appendChild(checkbox);
+        wrapper.appendChild(text);
+        monthMenu.appendChild(wrapper);
       });
+      updateMonthFilterLabel();
+      monthFilter.classList.remove('is-open');
+      document.getElementById('monthFilterTrigger').setAttribute('aria-expanded', 'false');
     };
 
     const isMonthColumnKey = (key) => key === '% of Revenue (Spend)' || monthRegex.test(key);
@@ -975,7 +1047,7 @@
     };
 
     const getMonthSelectionState = () => {
-      const selectedMonths = state.selectedMonths.length ? state.selectedMonths : ['JAN'];
+      const selectedMonths = state.selectedMonths.length ? state.selectedMonths : ['ALL'];
       const isAllSelected = selectedMonths.includes('ALL');
       const isSingleMonth = selectedMonths.length === 1 && !isAllSelected;
       const isMultiMonth = selectedMonths.length > 1 && !isAllSelected;
@@ -989,6 +1061,16 @@
         isMultiMonth,
         monthsForTotal
       };
+    };
+
+    const updateMonthFilterLabel = () => {
+      const trigger = document.getElementById('monthFilterTrigger');
+      const { selectedMonths, isAllSelected } = getMonthSelectionState();
+      if (isAllSelected) {
+        trigger.textContent = 'All months';
+        return;
+      }
+      trigger.textContent = selectedMonths.map((month) => getMonthLabel(month)).join(', ') || 'All months';
     };
 
     const getAggregateLabelSuffix = () => {
@@ -1192,17 +1274,39 @@
     document.getElementById('searchInput').addEventListener('input', applyFilters);
     document.getElementById('resetFilters').addEventListener('click', resetFilters);
     document.getElementById('downloadCsv').addEventListener('click', downloadCsv);
-    document.getElementById('monthFilter').addEventListener('change', (event) => {
-      const selected = Array.from(event.target.selectedOptions).map((option) => option.value);
-      state.selectedMonths = selected.length ? selected : ['JAN'];
-      if (state.selectedMonths.includes('ALL')) {
+    document.getElementById('monthFilterTrigger').addEventListener('click', () => {
+      const monthFilter = document.getElementById('monthFilter');
+      const isOpen = monthFilter.classList.toggle('is-open');
+      document.getElementById('monthFilterTrigger').setAttribute('aria-expanded', String(isOpen));
+    });
+    document.getElementById('monthFilterMenu').addEventListener('change', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
+      const selected = Array.from(document.querySelectorAll('#monthFilterMenu input[type="checkbox"]:checked'))
+        .map((checkbox) => checkbox.value);
+      if (selected.includes('ALL')) {
         state.selectedMonths = ['ALL'];
-        Array.from(event.target.options).forEach((option) => {
-          option.selected = option.value === 'ALL';
+        document.querySelectorAll('#monthFilterMenu input[type="checkbox"]').forEach((checkbox) => {
+          checkbox.checked = checkbox.value === 'ALL';
+        });
+      } else {
+        state.selectedMonths = selected.length ? selected : ['ALL'];
+        document.querySelectorAll('#monthFilterMenu input[type="checkbox"]').forEach((checkbox) => {
+          if (checkbox.value === 'ALL') {
+            checkbox.checked = state.selectedMonths.includes('ALL');
+          }
         });
       }
+      updateMonthFilterLabel();
       localStorage.setItem(monthStorageKey, JSON.stringify(state.selectedMonths));
       renderTable();
+    });
+    document.addEventListener('click', (event) => {
+      const monthFilter = document.getElementById('monthFilter');
+      if (!monthFilter.contains(event.target)) {
+        monthFilter.classList.remove('is-open');
+        document.getElementById('monthFilterTrigger').setAttribute('aria-expanded', 'false');
+      }
     });
     document.getElementById('rankDirection').addEventListener('change', (event) => {
       state.rankMode = event.target.value;
