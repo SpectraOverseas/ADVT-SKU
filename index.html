@@ -344,6 +344,14 @@
           <select id="lo1Filter"></select>
         </div>
         <div class="filter-group">
+          <label for="signalAmzFilter">Signal (AMZ)</label>
+          <select id="signalAmzFilter" multiple></select>
+        </div>
+        <div class="filter-group">
+          <label for="actionAmzFilter">Action (AMZ)</label>
+          <select id="actionAmzFilter"></select>
+        </div>
+        <div class="filter-group">
           <label for="signalFilter">Signal 2025</label>
           <select id="signalFilter"></select>
         </div>
@@ -544,6 +552,43 @@
       });
     };
 
+    const selectAllValue = '__all__';
+
+    const buildMultiSelectOptions = (select, values) => {
+      select.innerHTML = '';
+      const selectAllOption = document.createElement('option');
+      selectAllOption.value = selectAllValue;
+      selectAllOption.textContent = 'Select All';
+      select.appendChild(selectAllOption);
+      values.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    };
+
+    const getMultiSelectValues = (select) => Array.from(select.selectedOptions)
+      .map((option) => option.value)
+      .filter((value) => value && value !== selectAllValue);
+
+    const applySelectAllBehavior = (select) => {
+      const hasSelectAll = Array.from(select.selectedOptions)
+        .some((option) => option.value === selectAllValue);
+      if (!hasSelectAll) return;
+      Array.from(select.options).forEach((option) => {
+        if (option.value !== selectAllValue) {
+          option.selected = true;
+        }
+      });
+    };
+
+    const clearMultiSelect = (select) => {
+      Array.from(select.options).forEach((option) => {
+        option.selected = false;
+      });
+    };
+
     const applyLo1Lookup = (rows, lo1Lookup = {}) => {
       if (!lo1Lookup || Object.keys(lo1Lookup).length === 0) {
         return rows;
@@ -586,12 +631,16 @@
       const categories = Array.from(new Set(state.rows.map((row) => row['CAT']).filter(Boolean))).sort();
       const skus = Array.from(new Set(state.rows.map((row) => row['SKU PLAIN']).filter(Boolean))).sort();
       const lo1Values = Array.from(new Set(state.rows.map((row) => row['LO-1']).filter(Boolean))).sort();
+      const signalAmzValues = Array.from(new Set(state.rows.map((row) => row['Signal(AMZ)']).filter(Boolean))).sort();
+      const actionAmzValues = Array.from(new Set(state.rows.map((row) => row['Action(AMZ)']).filter(Boolean))).sort();
       const signals = Array.from(new Set(state.rows.map((row) => row['Signal 2025']).filter(Boolean))).sort();
       const actions = Array.from(new Set(state.rows.map((row) => row['Action 2025']).filter(Boolean))).sort();
 
       buildOptions(document.getElementById('categoryFilter'), categories);
       buildOptions(document.getElementById('skuFilter'), skus);
       buildOptions(document.getElementById('lo1Filter'), lo1Values);
+      buildMultiSelectOptions(document.getElementById('signalAmzFilter'), signalAmzValues);
+      buildOptions(document.getElementById('actionAmzFilter'), actionAmzValues);
       buildOptions(document.getElementById('signalFilter'), signals);
       buildOptions(document.getElementById('actionFilter'), actions);
     };
@@ -600,6 +649,8 @@
       const category = document.getElementById('categoryFilter').value;
       const sku = document.getElementById('skuFilter').value;
       const lo1 = document.getElementById('lo1Filter').value;
+      const signalAmz = getMultiSelectValues(document.getElementById('signalAmzFilter'));
+      const actionAmz = document.getElementById('actionAmzFilter').value;
       const signal = document.getElementById('signalFilter').value;
       const action = document.getElementById('actionFilter').value;
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -608,6 +659,8 @@
         if (category && row['CAT'] !== category) return false;
         if (sku && row['SKU PLAIN'] !== sku) return false;
         if (lo1 && row['LO-1'] !== lo1) return false;
+        if (signalAmz.length && !signalAmz.includes(row['Signal(AMZ)'])) return false;
+        if (actionAmz && row['Action(AMZ)'] !== actionAmz) return false;
         if (signal && row['Signal 2025'] !== signal) return false;
         if (action && row['Action 2025'] !== action) return false;
         if (search && !String(row['SKU PLAIN']).toLowerCase().includes(search)) return false;
@@ -624,6 +677,8 @@
       document.getElementById('categoryFilter').value = '';
       document.getElementById('skuFilter').value = '';
       document.getElementById('lo1Filter').value = '';
+      clearMultiSelect(document.getElementById('signalAmzFilter'));
+      document.getElementById('actionAmzFilter').value = '';
       document.getElementById('signalFilter').value = '';
       document.getElementById('actionFilter').value = '';
       document.getElementById('searchInput').value = '';
@@ -1067,6 +1122,12 @@
     document.getElementById('categoryFilter').addEventListener('change', applyFilters);
     document.getElementById('skuFilter').addEventListener('change', applyFilters);
     document.getElementById('lo1Filter').addEventListener('change', applyFilters);
+    const signalAmzFilter = document.getElementById('signalAmzFilter');
+    signalAmzFilter.addEventListener('change', () => {
+      applySelectAllBehavior(signalAmzFilter);
+      applyFilters();
+    });
+    document.getElementById('actionAmzFilter').addEventListener('change', applyFilters);
     document.getElementById('signalFilter').addEventListener('change', applyFilters);
     document.getElementById('actionFilter').addEventListener('change', applyFilters);
     document.getElementById('searchInput').addEventListener('input', applyFilters);
