@@ -99,6 +99,7 @@
 
     .filter-group .multi-select {
       position: relative;
+      width: 100%;
     }
 
     .filter-group .multi-select-trigger {
@@ -145,11 +146,15 @@
     .filter-group .multi-select-option {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 8px;
+      gap: 10px;
+      padding: 8px 10px;
       border-radius: 8px;
       font-size: 13px;
       cursor: pointer;
+    }
+
+    .filter-group .multi-select-option input {
+      margin: 0;
     }
 
     .filter-group .multi-select-option:hover {
@@ -1065,9 +1070,13 @@
 
     const updateMonthFilterLabel = () => {
       const trigger = document.getElementById('monthFilterTrigger');
-      const { selectedMonths, isAllSelected } = getMonthSelectionState();
+      const { selectedMonths, isAllSelected, isMultiMonth } = getMonthSelectionState();
       if (isAllSelected) {
         trigger.textContent = 'All months';
+        return;
+      }
+      if (isMultiMonth) {
+        trigger.textContent = 'Multiple months selected';
         return;
       }
       trigger.textContent = selectedMonths.map((month) => getMonthLabel(month)).join(', ') || 'All months';
@@ -1282,20 +1291,25 @@
     document.getElementById('monthFilterMenu').addEventListener('change', (event) => {
       const target = event.target;
       if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
-      const selected = Array.from(document.querySelectorAll('#monthFilterMenu input[type="checkbox"]:checked'))
-        .map((checkbox) => checkbox.value);
-      if (selected.includes('ALL')) {
-        state.selectedMonths = ['ALL'];
-        document.querySelectorAll('#monthFilterMenu input[type="checkbox"]').forEach((checkbox) => {
+      const checkboxes = Array.from(document.querySelectorAll('#monthFilterMenu input[type="checkbox"]'));
+      if (target.value === 'ALL' && target.checked) {
+        checkboxes.forEach((checkbox) => {
           checkbox.checked = checkbox.value === 'ALL';
         });
+        state.selectedMonths = ['ALL'];
       } else {
-        state.selectedMonths = selected.length ? selected : ['ALL'];
-        document.querySelectorAll('#monthFilterMenu input[type="checkbox"]').forEach((checkbox) => {
+        checkboxes.forEach((checkbox) => {
           if (checkbox.value === 'ALL') {
-            checkbox.checked = state.selectedMonths.includes('ALL');
+            checkbox.checked = false;
           }
         });
+        const selected = checkboxes.filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value);
+        state.selectedMonths = selected.length ? selected : ['ALL'];
+        if (state.selectedMonths.includes('ALL')) {
+          checkboxes.forEach((checkbox) => {
+            checkbox.checked = checkbox.value === 'ALL';
+          });
+        }
       }
       updateMonthFilterLabel();
       localStorage.setItem(monthStorageKey, JSON.stringify(state.selectedMonths));
