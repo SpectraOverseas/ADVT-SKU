@@ -710,6 +710,19 @@
       document.getElementById('signalFilter').value = '';
       document.getElementById('actionFilter').value = '';
       document.getElementById('searchInput').value = '';
+      state.selectedMonths = ['ALL'];
+      localStorage.setItem(monthStorageKey, JSON.stringify(state.selectedMonths));
+      document.querySelectorAll('#monthFilterMenu input[type="checkbox"]').forEach((checkbox) => {
+        checkbox.checked = checkbox.value === 'ALL';
+      });
+      updateMonthFilterLabel();
+      const monthFilter = document.getElementById('monthFilter');
+      monthFilter.classList.remove('is-open');
+      document.getElementById('monthFilterTrigger').setAttribute('aria-expanded', 'false');
+      state.rankMode = 'top';
+      state.rankCount = null;
+      document.getElementById('rankDirection').value = 'top';
+      document.getElementById('rankCount').value = '';
       applyFilters();
     };
 
