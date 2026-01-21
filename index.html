@@ -177,6 +177,37 @@
       margin-bottom: 12px;
     }
 
+    .table-title-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .table-month-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .table-month-filter select {
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 12px;
+      text-transform: none;
+      color: var(--text);
+    }
+
     .table-limit-controls {
       display: flex;
       align-items: center;
@@ -379,9 +410,15 @@
 
     <section class="panel" id="tableSection">
       <div class="table-actions">
-        <div>
-          <strong>SKU Detail Table</strong>
-          <div class="muted" id="rowCount">0 rows</div>
+        <div class="table-title-controls">
+          <div>
+            <strong>SKU Detail Table</strong>
+            <div class="muted" id="rowCount">0 rows</div>
+          </div>
+          <div class="table-month-filter">
+            <label for="monthFilter">Month</label>
+            <select id="monthFilter" aria-label="Month filter"></select>
+          </div>
         </div>
         <div class="filter-actions">
           <div class="table-limit-controls" aria-label="Top or bottom records">
@@ -419,7 +456,8 @@
       sortKey: null,
       sortDir: 'desc',
       rankMode: 'top',
-      rankCount: null
+      rankCount: null,
+      selectedMonth: 'JAN'
     };
 
     const formatCurrency = (value) => {
@@ -788,16 +826,126 @@
       { key: 'Action 2025', label: 'Action 2025' }
     ];
 
+    const monthOptions = [
+      { value: 'JAN', label: 'JAN-25' },
+      { value: 'FEB', label: 'FEB-25' },
+      { value: 'MAR', label: 'MAR-25' },
+      { value: 'APR', label: 'APR-25' },
+      { value: 'MAY', label: 'MAY-25' },
+      { value: 'JUN', label: 'JUN-25' },
+      { value: 'JUL', label: 'JUL-25' },
+      { value: 'AUG', label: 'AUG-25' },
+      { value: 'SEP', label: 'SEP-25' },
+      { value: 'OCT', label: 'OCT-25' },
+      { value: 'NOV', label: 'NOV-25' },
+      { value: 'DEC', label: 'DEC-25' }
+    ];
+
+    const monthStorageKey = 'skuWiseSelectedMonth';
+    const monthRegex = new RegExp(`^(${monthOptions.map((option) => option.value).join('|')})-25 `);
+
+    const monthColumnKeyMap = {
+      JAN: {
+        revenue: 'JAN-25 REVENUE',
+        spend: 'JAN-25 ADVT SPEND',
+        share: 'JAN-25 % of Revenue (Spend)'
+      },
+      FEB: {
+        revenue: 'FEB-25 REVENUE',
+        spend: 'FEB-25 ADVT SPEND',
+        share: 'FEB-25 % of Revenue (Spend)'
+      },
+      MAR: {
+        revenue: 'MAR-25 REVENUE',
+        spend: 'MAR-25 ADVT SPEND',
+        share: 'MAR-25 % of Revenue (Spend)'
+      },
+      APR: {
+        revenue: 'APR-25 REVENUE',
+        spend: 'APR-25 ADVT SPEND',
+        share: 'APR-25 % of Revenue (Spend)'
+      },
+      MAY: {
+        revenue: 'MAY-25 REVENUE',
+        spend: 'MAY-25 ADVT SPEND',
+        share: 'MAY-25 % of Revenue (Spend)'
+      },
+      JUN: {
+        revenue: 'JUN-25 REVENUE',
+        spend: 'JUN-25 ADVT SPEND',
+        share: 'JUN-25 % of Revenue (Spend)'
+      },
+      JUL: {
+        revenue: 'JUL-25 REVENUE',
+        spend: 'JUL-25 ADVT SPEND',
+        share: 'JUL-25 % of Revenue (Spend)'
+      },
+      AUG: {
+        revenue: 'AUG-25 REVENUE',
+        spend: 'AUG-25 ADVT SPEND',
+        share: 'AUG-25 % of Revenue (Spend)'
+      },
+      SEP: {
+        revenue: 'SEP-25 REVENUE',
+        spend: 'SEP-25 ADVT SPEND',
+        share: 'SEP-25 % of Revenue (Spend)'
+      },
+      OCT: {
+        revenue: 'OCT-25 REVENUE',
+        spend: 'OCT-25 ADVT SPEND',
+        share: 'OCT-25 % of Revenue (Spend)'
+      },
+      NOV: {
+        revenue: 'NOV-25 REVENUE',
+        spend: 'NOV-25 ADVT SPEND',
+        share: 'NOV-25 % of Revenue (Spend)'
+      },
+      DEC: {
+        revenue: 'DEC-25 REVENUE',
+        spend: 'DEC-25 ADVT SPEND',
+        share: '% of Revenue (Spend)'
+      }
+    };
+
+    const initializeMonthFilter = () => {
+      const monthFilter = document.getElementById('monthFilter');
+      monthFilter.innerHTML = '';
+      monthOptions.forEach((option) => {
+        const opt = document.createElement('option');
+        opt.value = option.value;
+        opt.textContent = option.label;
+        monthFilter.appendChild(opt);
+      });
+      const storedMonth = localStorage.getItem(monthStorageKey);
+      const defaultMonth = monthOptions.some((option) => option.value === storedMonth) ? storedMonth : 'JAN';
+      state.selectedMonth = defaultMonth;
+      monthFilter.value = defaultMonth;
+    };
+
+    const isMonthColumnKey = (key) => key === '% of Revenue (Spend)' || monthRegex.test(key);
+
+    const getVisibleColumns = () => {
+      const selected = monthColumnKeyMap[state.selectedMonth] || monthColumnKeyMap.JAN;
+      const selectedKeys = new Set(Object.values(selected));
+      return tableColumns.filter(({ key }) => {
+        if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
+        if (selectedKeys.has(key)) return true;
+        if (isMonthColumnKey(key)) return false;
+        return true;
+      });
+    };
+
     const renderTable = () => {
       const tableHead = document.getElementById('tableHead');
       const tableBody = document.getElementById('tableBody');
       const displayRows = getDisplayRows();
       const start = (state.currentPage - 1) * state.pageSize;
       const pageRows = displayRows.slice(start, start + state.pageSize);
-      const columnAlignments = getColumnAlignments(tableColumns, state.rows);
+      const visibleColumns = getVisibleColumns();
+      const columnAlignments = getColumnAlignments(visibleColumns, state.rows);
 
       tableHead.innerHTML = '';
-      tableColumns.forEach(({ key, label }, index) => {
+      visibleColumns.forEach(({ key, label }, index) => {
         const th = document.createElement('th');
         th.textContent = label;
         th.dataset.colIndex = String(index);
@@ -809,7 +957,7 @@
       tableBody.innerHTML = '';
       pageRows.forEach((row) => {
         const tr = document.createElement('tr');
-        tableColumns.forEach(({ key }, index) => {
+        visibleColumns.forEach(({ key }, index) => {
           const td = document.createElement('td');
           td.dataset.colIndex = String(index);
           td.classList.add(columnAlignments[key]);
@@ -899,9 +1047,10 @@
     };
 
     const downloadCsv = () => {
-      const lines = [tableColumns.map(({ label }) => label).join(',')];
+      const visibleColumns = getVisibleColumns();
+      const lines = [visibleColumns.map(({ label }) => label).join(',')];
       state.filtered.forEach((row) => {
-        const line = tableColumns.map(({ key }) => {
+        const line = visibleColumns.map(({ key }) => {
           const value = row[key] ?? '';
           return `"${String(value).replace(/"/g, '""')}"`;
         });
@@ -923,6 +1072,11 @@
     document.getElementById('searchInput').addEventListener('input', applyFilters);
     document.getElementById('resetFilters').addEventListener('click', resetFilters);
     document.getElementById('downloadCsv').addEventListener('click', downloadCsv);
+    document.getElementById('monthFilter').addEventListener('change', (event) => {
+      state.selectedMonth = event.target.value;
+      localStorage.setItem(monthStorageKey, state.selectedMonth);
+      renderTable();
+    });
     document.getElementById('rankDirection').addEventListener('change', (event) => {
       state.rankMode = event.target.value;
       state.currentPage = 1;
@@ -983,6 +1137,7 @@
 
     setView('table');
 
+    initializeMonthFilter();
     loadData();
   </script>
 </body>
