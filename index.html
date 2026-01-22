@@ -1,0 +1,1415 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SKU Wise Ad Spend</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #102a43;
+      --muted: #627d98;
+      --primary: #1f4b99;
+      --accent: #ffb020;
+      --border: #e2e8f0;
+      --success: #1fbf75;
+      --danger: #e83e3e;
+      --table-hover-row: #edf2fb;
+      --table-hover-col: #e6edf7;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", "Segoe UI", Tahoma, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: linear-gradient(120deg, #142850, #1b3b8d, #1f4b99);
+      color: #fff;
+      padding: 28px 32px 32px;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    main {
+      padding: 24px 32px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(15, 38, 78, 0.08);
+      padding: 20px 24px;
+      border: 1px solid var(--border);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .filter-group select,
+    .filter-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+    }
+
+    .filter-group select[multiple] {
+      min-height: 44px;
+      padding-right: 6px;
+    }
+
+    .filter-group .multi-select {
+      position: relative;
+      width: 100%;
+    }
+
+    .filter-group .multi-select-trigger {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 14px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .filter-group .multi-select-trigger::after {
+      content: "▾";
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .filter-group .multi-select-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      width: 100%;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 24px rgba(15, 38, 78, 0.12);
+      padding: 2px 0;
+      max-height: 200px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      z-index: 20;
+      display: none;
+    }
+
+    .filter-group .multi-select.is-open .multi-select-menu {
+      display: block;
+    }
+
+    .filter-group .multi-select-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      line-height: 1.2;
+      width: 100%;
+    }
+
+    .filter-group .multi-select-option input {
+      margin: 0;
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .filter-group .multi-select-option span {
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .filter-group .multi-select-option:hover {
+      background: #f1f5f9;
+    }
+
+    .filter-actions {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-outline {
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card {
+      padding: 16px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+    }
+
+    .kpi-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .kpi-value {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .chart-card {
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #fff;
+      height: 100%;
+    }
+
+    .chart-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .table-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .table-title-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .table-limit-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .table-limit-controls select,
+    .table-limit-controls input {
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    tbody td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .align-right {
+      text-align: right;
+    }
+
+    .align-center {
+      text-align: center;
+    }
+
+    tbody tr:hover td {
+      background: var(--table-hover-row);
+    }
+
+    thead th.col-hover,
+    tbody td.col-hover {
+      background: var(--table-hover-col);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .pill.success { background: rgba(31, 191, 117, 0.15); color: var(--success); }
+    .pill.warning { background: rgba(255, 176, 32, 0.18); color: #b26a00; }
+    .pill.danger { background: rgba(232, 62, 62, 0.15); color: var(--danger); }
+    .pill.signal-very-good { background: #28a745; color: #fff; }
+    .pill.signal-good { background: #7cd88d; color: #0b3d1f; }
+    .pill.signal-only-spent { background: #5bc0de; color: #0b3d4d; }
+    .pill.signal-not-spent { background: #6c757d; color: #fff; }
+    .pill.signal-risky { background: #ffc107; color: #4a3b00; }
+    .pill.signal-high-risk { background: #fd7e14; color: #4a1e00; }
+    .pill.signal-very-risky { background: #dc3545; color: #fff; }
+    .pill.signal-unknown { background: #e2e8f0; color: var(--text); }
+    .pill.action-good { background: #28a745; color: #fff; }
+    .pill.action-check-only-spent { background: #5bc0de; color: #0b3d4d; }
+    .pill.action-review-campaign { background: #ffc107; color: #4a3b00; }
+    .pill.action-urgently-optimize { background: #fd7e14; color: #4a1e00; }
+    .pill.action-stop-immediately { background: #dc3545; color: #fff; }
+    .pill.action-unknown { background: #e2e8f0; color: var(--text); }
+
+    .pagination {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .pagination button {
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .is-hidden {
+      display: none;
+    }
+
+    @media (max-width: 720px) {
+      header {
+        padding: 20px 20px 24px;
+      }
+
+      main {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SKU Wise Ad Spend</h1>
+  </header>
+  <main>
+    <section class="panel">
+      <div class="filters">
+        <div class="filter-group">
+          <label for="categoryFilter">Category</label>
+          <select id="categoryFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="skuFilter">SKU</label>
+          <select id="skuFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="lo1Filter">LO-1</label>
+          <select id="lo1Filter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="signalAmzFilter">Signal (AMZ)</label>
+          <select id="signalAmzFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="actionAmzFilter">Action (AMZ)</label>
+          <select id="actionAmzFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="signalFilter">Signal 2025</label>
+          <select id="signalFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="actionFilter">Action 2025</label>
+          <select id="actionFilter"></select>
+        </div>
+        <div class="filter-group">
+          <label for="monthFilter">Month</label>
+          <div class="multi-select" id="monthFilter">
+            <button class="multi-select-trigger" type="button" id="monthFilterTrigger" aria-haspopup="listbox" aria-expanded="false">
+              All months
+            </button>
+            <div class="multi-select-menu" id="monthFilterMenu" role="listbox" aria-multiselectable="true"></div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label for="searchInput">Search SKU</label>
+          <input id="searchInput" type="search" placeholder="Search SKU" />
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-outline" id="resetFilters">Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">DEC-25 Revenue</div>
+          <div class="kpi-value" id="kpiRevenue">-</div>
+          <div class="kpi-sub" id="kpiRevenueRows">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">DEC-25 Ad Spend</div>
+          <div class="kpi-value" id="kpiSpend">-</div>
+          <div class="kpi-sub" id="kpiSpendShare">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Spend % of Revenue</div>
+          <div class="kpi-value" id="kpiShare">-</div>
+          <div class="kpi-sub">Weighted by revenue</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Revenue 2025</div>
+          <div class="kpi-value" id="kpiRevenue2025">-</div>
+          <div class="kpi-sub" id="kpiRevenue2025Rows">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Ad Spend 2025</div>
+          <div class="kpi-value" id="kpiSpend2025">-</div>
+          <div class="kpi-sub" id="kpiSpend2025Share">-</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel is-hidden" id="chartSection">
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Top SKUs by Dec-25 Revenue</h3>
+          <canvas id="revenueChart" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Dec-25 vs 2025 Ad Spend</h3>
+          <canvas id="spendChart" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Spend % Distribution</h3>
+          <canvas id="shareChart" height="220"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="tableSection">
+      <div class="table-actions">
+        <div class="table-title-controls">
+          <div>
+            <strong>SKU Detail Table</strong>
+            <div class="muted" id="rowCount">0 rows</div>
+          </div>
+        </div>
+        <div class="filter-actions">
+          <div class="table-limit-controls" aria-label="Top or bottom records">
+            <select id="rankDirection" aria-label="Top or bottom selection">
+              <option value="top">Top</option>
+              <option value="bottom">Bottom</option>
+            </select>
+            <input id="rankCount" type="number" min="1" step="1" placeholder="Count" aria-label="Number of records" />
+          </div>
+          <button class="btn btn-outline" id="viewToggle" type="button">Graph View</button>
+          <button class="btn btn-outline" id="downloadCsv">Download CSV</button>
+        </div>
+      </div>
+      <div id="tableContent">
+        <div style="overflow-x:auto;">
+          <table id="skuTable">
+            <thead>
+              <tr id="tableHead"></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      rows: [],
+      filtered: [],
+      headers: [],
+      currentPage: 1,
+      pageSize: 15,
+      sortKey: null,
+      sortDir: 'desc',
+      rankMode: 'top',
+      rankCount: null,
+      selectedMonths: ['ALL']
+    };
+
+    const formatCurrency = (value) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+      return value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    };
+
+    const formatKpiCurrency = (value) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+      return value.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    };
+
+    const toPercentValue = (value) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return null;
+      return Math.abs(value) <= 1 ? value * 100 : value;
+    };
+
+    const formatPercent = (value, options = {}) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+      const { assumeRatio = false } = options;
+      const percentValue = assumeRatio ? toPercentValue(value) : value;
+      if (percentValue === null) return '-';
+      return `${percentValue.toFixed(2)}%`;
+    };
+
+    const formatKpiPercent = (value) => {
+      if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+      return `${value.toFixed(0)}%`;
+    };
+
+    const safeNumber = (value) => (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
+
+    const getSignalPillClass = (value) => {
+      if (!value) return 'signal-unknown';
+      switch (String(value).trim().toLowerCase()) {
+        case 'very good':
+          return 'signal-very-good';
+        case 'good':
+          return 'signal-good';
+        case 'only spent':
+          return 'signal-only-spent';
+        case 'not spent':
+          return 'signal-not-spent';
+        case 'risky':
+          return 'signal-risky';
+        case 'high risk':
+          return 'signal-high-risk';
+        case 'very risky':
+          return 'signal-very-risky';
+        default:
+          return 'signal-unknown';
+      }
+    };
+
+    const getActionPillClass = (value) => {
+      if (!value) return 'action-unknown';
+      switch (String(value).trim().toLowerCase()) {
+        case 'good for now':
+          return 'action-good';
+        case 'check only spent':
+          return 'action-check-only-spent';
+        case 'review campaign':
+          return 'action-review-campaign';
+        case 'urgently optimize':
+          return 'action-urgently-optimize';
+        case 'stop immediately':
+          return 'action-stop-immediately';
+        default:
+          return 'action-unknown';
+      }
+    };
+
+    const buildOptions = (select, values) => {
+      select.innerHTML = '';
+      const allOption = document.createElement('option');
+      allOption.value = '';
+      allOption.textContent = 'All';
+      select.appendChild(allOption);
+      values.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    };
+
+    const applyLo1Lookup = (rows, lo1Lookup = {}) => {
+      if (!lo1Lookup || Object.keys(lo1Lookup).length === 0) {
+        return rows;
+      }
+
+      let corrected = 0;
+      const pendingLookups = new Set(Object.keys(lo1Lookup));
+      const updated = rows.map((row) => {
+        const sku = row['SKU PLAIN'];
+        if (!sku) return row;
+        const expected = lo1Lookup[sku];
+        if (!expected) {
+          return row;
+        }
+        pendingLookups.delete(sku);
+        if (row['LO-1'] !== expected) {
+          corrected += 1;
+          return { ...row, 'LO-1': expected };
+        }
+        return row;
+      });
+
+      if (corrected || pendingLookups.size) {
+        console.info('LO-1 lookup validation complete.', { corrected, unmatchedLookups: pendingLookups.size });
+      }
+
+      return updated;
+    };
+
+    const loadData = async () => {
+      const response = await fetch('data.json');
+      const payload = await response.json();
+      state.headers = Object.values(payload.headers);
+      state.rows = applyLo1Lookup(payload.rows || [], payload.lookup?.lo1BySku);
+      initializeFilters();
+      applyFilters();
+    };
+
+    const initializeFilters = () => {
+      const categories = Array.from(new Set(state.rows.map((row) => row['CAT']).filter(Boolean))).sort();
+      const skus = Array.from(new Set(state.rows.map((row) => row['SKU PLAIN']).filter(Boolean))).sort();
+      const lo1Values = Array.from(new Set(state.rows.map((row) => row['LO-1']).filter(Boolean))).sort();
+      const signalAmzValues = Array.from(new Set(state.rows.map((row) => row['Signal(AMZ)']).filter(Boolean))).sort();
+      const actionAmzValues = Array.from(new Set(state.rows.map((row) => row['Action(AMZ)']).filter(Boolean))).sort();
+      const signals = Array.from(new Set(state.rows.map((row) => row['Signal 2025']).filter(Boolean))).sort();
+      const actions = Array.from(new Set(state.rows.map((row) => row['Action 2025']).filter(Boolean))).sort();
+
+      buildOptions(document.getElementById('categoryFilter'), categories);
+      buildOptions(document.getElementById('skuFilter'), skus);
+      buildOptions(document.getElementById('lo1Filter'), lo1Values);
+      buildOptions(document.getElementById('signalAmzFilter'), signalAmzValues);
+      buildOptions(document.getElementById('actionAmzFilter'), actionAmzValues);
+      buildOptions(document.getElementById('signalFilter'), signals);
+      buildOptions(document.getElementById('actionFilter'), actions);
+    };
+
+    const applyFilters = () => {
+      const category = document.getElementById('categoryFilter').value;
+      const sku = document.getElementById('skuFilter').value;
+      const lo1 = document.getElementById('lo1Filter').value;
+      const signalAmz = document.getElementById('signalAmzFilter').value;
+      const actionAmz = document.getElementById('actionAmzFilter').value;
+      const signal = document.getElementById('signalFilter').value;
+      const action = document.getElementById('actionFilter').value;
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+
+      state.filtered = state.rows.filter((row) => {
+        if (category && row['CAT'] !== category) return false;
+        if (sku && row['SKU PLAIN'] !== sku) return false;
+        if (lo1 && row['LO-1'] !== lo1) return false;
+        if (signalAmz && row['Signal(AMZ)'] !== signalAmz) return false;
+        if (actionAmz && row['Action(AMZ)'] !== actionAmz) return false;
+        if (signal && row['Signal 2025'] !== signal) return false;
+        if (action && row['Action 2025'] !== action) return false;
+        if (search && !String(row['SKU PLAIN']).toLowerCase().includes(search)) return false;
+        return true;
+      });
+
+      state.currentPage = 1;
+      updateKPIs();
+      updateCharts();
+      renderTable();
+    };
+
+    const resetFilters = () => {
+      document.getElementById('categoryFilter').value = '';
+      document.getElementById('skuFilter').value = '';
+      document.getElementById('lo1Filter').value = '';
+      document.getElementById('signalAmzFilter').value = '';
+      document.getElementById('actionAmzFilter').value = '';
+      document.getElementById('signalFilter').value = '';
+      document.getElementById('actionFilter').value = '';
+      document.getElementById('searchInput').value = '';
+      state.selectedMonths = ['ALL'];
+      localStorage.setItem(monthStorageKey, JSON.stringify(state.selectedMonths));
+      document.querySelectorAll('#monthFilterMenu input[type="checkbox"]').forEach((checkbox) => {
+        checkbox.checked = checkbox.value === 'ALL';
+      });
+      updateMonthFilterLabel();
+      const monthFilter = document.getElementById('monthFilter');
+      monthFilter.classList.remove('is-open');
+      document.getElementById('monthFilterTrigger').setAttribute('aria-expanded', 'false');
+      state.rankMode = 'top';
+      state.rankCount = null;
+      document.getElementById('rankDirection').value = 'top';
+      document.getElementById('rankCount').value = '';
+      applyFilters();
+    };
+
+    const updateKPIs = () => {
+      const revenue = state.filtered.reduce((acc, row) => acc + safeNumber(row['DEC-25 REVENUE']), 0);
+      const spend = state.filtered.reduce((acc, row) => acc + safeNumber(row['DEC-25 ADVT SPEND']), 0);
+      const revenue2025 = state.filtered.reduce((acc, row) => acc + safeNumber(row['REVENUE 2025']), 0);
+      const spend2025 = state.filtered.reduce((acc, row) => acc + safeNumber(row['ADVT SPEND 2025']), 0);
+
+      const weightedShare = revenue ? (spend / revenue) * 100 : 0;
+      const spendShare2025 = revenue2025 ? (spend2025 / revenue2025) * 100 : 0;
+
+      document.getElementById('kpiRevenue').textContent = formatKpiCurrency(revenue);
+      document.getElementById('kpiRevenueRows').textContent = `${state.filtered.length} SKUs`;
+      document.getElementById('kpiSpend').textContent = formatKpiCurrency(spend);
+      document.getElementById('kpiSpendShare').textContent = `${formatPercent(weightedShare)} of revenue`;
+      document.getElementById('kpiShare').textContent = formatKpiPercent(weightedShare);
+      document.getElementById('kpiRevenue2025').textContent = formatKpiCurrency(revenue2025);
+      document.getElementById('kpiRevenue2025Rows').textContent = `${state.filtered.length} SKUs`;
+      document.getElementById('kpiSpend2025').textContent = formatKpiCurrency(spend2025);
+      document.getElementById('kpiSpend2025Share').textContent = `${formatPercent(spendShare2025)} of revenue`;
+    };
+
+    let revenueChart;
+    let spendChart;
+    let shareChart;
+
+    const updateCharts = () => {
+      const top = [...state.filtered]
+        .filter((row) => row['SKU PLAIN'])
+        .sort((a, b) => safeNumber(b['DEC-25 REVENUE']) - safeNumber(a['DEC-25 REVENUE']))
+        .slice(0, 8);
+
+      const labels = top.map((row) => row['SKU PLAIN']);
+      const revenueData = top.map((row) => safeNumber(row['DEC-25 REVENUE']));
+
+      if (revenueChart) revenueChart.destroy();
+      revenueChart = new Chart(document.getElementById('revenueChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'DEC-25 Revenue',
+            data: revenueData,
+            backgroundColor: '#1f4b99'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { ticks: { callback: (value) => value.toLocaleString('en-IN') } }
+          }
+        }
+      });
+
+      const spendPoints = top.map((row) => safeNumber(row['DEC-25 ADVT SPEND']));
+      const spend2025Points = top.map((row) => safeNumber(row['ADVT SPEND 2025']));
+
+      if (spendChart) spendChart.destroy();
+      spendChart = new Chart(document.getElementById('spendChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Dec-25 Spend',
+              data: spendPoints,
+              borderColor: '#ffb020',
+              backgroundColor: 'rgba(255,176,32,0.25)'
+            },
+            {
+              label: '2025 Spend',
+              data: spend2025Points,
+              borderColor: '#1f4b99',
+              backgroundColor: 'rgba(31,75,153,0.15)'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: { ticks: { callback: (value) => value.toLocaleString('en-IN') } }
+          }
+        }
+      });
+
+      const shareBuckets = {
+        '<10%': 0,
+        '10-20%': 0,
+        '20-30%': 0,
+        '30-40%': 0,
+        '40%+': 0
+      };
+
+      state.filtered.forEach((row) => {
+        const share = toPercentValue(safeNumber(row['% of Revenue (Spend)'])) ?? 0;
+        if (share < 10) shareBuckets['<10%'] += 1;
+        else if (share < 20) shareBuckets['10-20%'] += 1;
+        else if (share < 30) shareBuckets['20-30%'] += 1;
+        else if (share < 40) shareBuckets['30-40%'] += 1;
+        else shareBuckets['40%+'] += 1;
+      });
+
+      if (shareChart) shareChart.destroy();
+      shareChart = new Chart(document.getElementById('shareChart'), {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(shareBuckets),
+          datasets: [{
+            data: Object.values(shareBuckets),
+            backgroundColor: ['#1f4b99', '#2f6ad9', '#4f8bff', '#ffb020', '#f97316']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+    };
+
+    const getRowValue = (row, key) => {
+      if (Object.values(totalColumnKeys).includes(key)) {
+        const { monthsForTotal } = getMonthSelectionState();
+        const totals = monthsForTotal.reduce(
+          (acc, month) => {
+            const monthKeys = monthColumnKeyMap[month];
+            if (!monthKeys) return acc;
+            acc.revenue += safeNumber(row[monthKeys.revenue]);
+            acc.spend += safeNumber(row[monthKeys.spend]);
+            return acc;
+          },
+          { revenue: 0, spend: 0 }
+        );
+        const share = totals.revenue ? (totals.spend / totals.revenue) * 100 : 0;
+        if (key === totalColumnKeys.revenue) return totals.revenue;
+        if (key === totalColumnKeys.spend) return totals.spend;
+        return share;
+      }
+      return row[key];
+    };
+
+    const topBottomMetric = 'REVENUE 2025';
+
+    const sortRowsArray = (rows, key, direction) => rows.sort((a, b) => {
+      const aVal = getRowValue(a, key);
+      const bVal = getRowValue(b, key);
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return (aVal - bVal) * direction;
+      }
+      return String(aVal || '').localeCompare(String(bVal || '')) * direction;
+    });
+
+    const getDisplayRows = () => {
+      let rows = state.filtered;
+      if (state.rankCount) {
+        const direction = state.rankMode === 'bottom' ? 1 : -1;
+        rows = rows.filter((row) => isNumericValue(getRowValue(row, topBottomMetric)));
+        rows = [...rows];
+        sortRowsArray(rows, topBottomMetric, direction);
+        rows = rows.slice(0, state.rankCount);
+      }
+      if (state.sortKey) {
+        const direction = state.sortDir === 'asc' ? 1 : -1;
+        rows = [...rows];
+        sortRowsArray(rows, state.sortKey, direction);
+      }
+      return rows;
+    };
+
+    const tableColumns = [
+      { key: 'CAT', label: 'CAT' },
+      { key: 'SKU PLAIN', label: 'SKU PLAIN' },
+      { key: 'LO-1', label: 'LO-1' },
+      { key: 'TOTAL_AD_SPEND', label: 'TOTAL AD SPEND' },
+      { key: 'TOTAL_REVENUE', label: 'TOTAL REVENUE' },
+      { key: 'TOTAL_%_OF_REVENUE', label: 'TOTAL % OF REVENUE' },
+      { key: 'JAN-25 REVENUE', label: 'JAN-25 REVENUE' },
+      { key: 'JAN-25 ADVT SPEND', label: 'JAN-25 ADVT SPEND' },
+      { key: 'JAN-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'FEB-25 REVENUE', label: 'FEB-25 REVENUE' },
+      { key: 'FEB-25 ADVT SPEND', label: 'FEB-25 ADVT SPEND' },
+      { key: 'FEB-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'MAR-25 REVENUE', label: 'MAR-25 REVENUE' },
+      { key: 'MAR-25 ADVT SPEND', label: 'MAR-25 ADVT SPEND' },
+      { key: 'MAR-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'APR-25 REVENUE', label: 'APR-25 REVENUE' },
+      { key: 'APR-25 ADVT SPEND', label: 'APR-25 ADVT SPEND' },
+      { key: 'APR-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'MAY-25 REVENUE', label: 'MAY-25 REVENUE' },
+      { key: 'MAY-25 ADVT SPEND', label: 'MAY-25 ADVT SPEND' },
+      { key: 'MAY-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'JUN-25 REVENUE', label: 'JUN-25 REVENUE' },
+      { key: 'JUN-25 ADVT SPEND', label: 'JUN-25 ADVT SPEND' },
+      { key: 'JUN-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'JUL-25 REVENUE', label: 'JUL-25 REVENUE' },
+      { key: 'JUL-25 ADVT SPEND', label: 'JUL-25 ADVT SPEND' },
+      { key: 'JUL-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'AUG-25 REVENUE', label: 'AUG-25 REVENUE' },
+      { key: 'AUG-25 ADVT SPEND', label: 'AUG-25 ADVT SPEND' },
+      { key: 'AUG-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'SEP-25 REVENUE', label: 'SEP-25 REVENUE' },
+      { key: 'SEP-25 ADVT SPEND', label: 'SEP-25 ADVT SPEND' },
+      { key: 'SEP-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'OCT-25 REVENUE', label: 'OCT-25 REVENUE' },
+      { key: 'OCT-25 ADVT SPEND', label: 'OCT-25 ADVT SPEND' },
+      { key: 'OCT-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'NOV-25 REVENUE', label: 'NOV-25 REVENUE' },
+      { key: 'NOV-25 ADVT SPEND', label: 'NOV-25 ADVT SPEND' },
+      { key: 'NOV-25 % of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'DEC-25 REVENUE', label: 'DEC-25 REVENUE' },
+      { key: 'DEC-25 ADVT SPEND', label: 'DEC-25 ADVT SPEND' },
+      { key: '% of Revenue (Spend)', label: '% of Revenue (Spend)' },
+      { key: 'Signal(AMZ)', label: 'Signal(AMZ)' },
+      { key: 'Action(AMZ)', label: 'Action(AMZ)' },
+      { key: 'ADVT SPEND 2025', label: 'ADVT SPEND 2025' },
+      { key: 'REVENUE 2025', label: 'REVENUE 2025' },
+      { key: '% of Revenue 2025', label: '% of Revenue 2025' },
+      { key: 'Signal 2025', label: 'Signal 2025' },
+      { key: 'Action 2025', label: 'Action 2025' }
+    ];
+
+    const monthOptions = [
+      { value: 'ALL', label: 'ALL' },
+      { value: 'JAN', label: 'JAN-25' },
+      { value: 'FEB', label: 'FEB-25' },
+      { value: 'MAR', label: 'MAR-25' },
+      { value: 'APR', label: 'APR-25' },
+      { value: 'MAY', label: 'MAY-25' },
+      { value: 'JUN', label: 'JUN-25' },
+      { value: 'JUL', label: 'JUL-25' },
+      { value: 'AUG', label: 'AUG-25' },
+      { value: 'SEP', label: 'SEP-25' },
+      { value: 'OCT', label: 'OCT-25' },
+      { value: 'NOV', label: 'NOV-25' },
+      { value: 'DEC', label: 'DEC-25' }
+    ];
+
+    const monthStorageKey = 'skuWiseSelectedMonth';
+    const monthRegex = new RegExp(`^(${monthOptions.filter((option) => option.value !== 'ALL').map((option) => option.value).join('|')})-25 `);
+
+    const monthColumnKeyMap = {
+      JAN: {
+        revenue: 'JAN-25 REVENUE',
+        spend: 'JAN-25 ADVT SPEND',
+        share: 'JAN-25 % of Revenue (Spend)'
+      },
+      FEB: {
+        revenue: 'FEB-25 REVENUE',
+        spend: 'FEB-25 ADVT SPEND',
+        share: 'FEB-25 % of Revenue (Spend)'
+      },
+      MAR: {
+        revenue: 'MAR-25 REVENUE',
+        spend: 'MAR-25 ADVT SPEND',
+        share: 'MAR-25 % of Revenue (Spend)'
+      },
+      APR: {
+        revenue: 'APR-25 REVENUE',
+        spend: 'APR-25 ADVT SPEND',
+        share: 'APR-25 % of Revenue (Spend)'
+      },
+      MAY: {
+        revenue: 'MAY-25 REVENUE',
+        spend: 'MAY-25 ADVT SPEND',
+        share: 'MAY-25 % of Revenue (Spend)'
+      },
+      JUN: {
+        revenue: 'JUN-25 REVENUE',
+        spend: 'JUN-25 ADVT SPEND',
+        share: 'JUN-25 % of Revenue (Spend)'
+      },
+      JUL: {
+        revenue: 'JUL-25 REVENUE',
+        spend: 'JUL-25 ADVT SPEND',
+        share: 'JUL-25 % of Revenue (Spend)'
+      },
+      AUG: {
+        revenue: 'AUG-25 REVENUE',
+        spend: 'AUG-25 ADVT SPEND',
+        share: 'AUG-25 % of Revenue (Spend)'
+      },
+      SEP: {
+        revenue: 'SEP-25 REVENUE',
+        spend: 'SEP-25 ADVT SPEND',
+        share: 'SEP-25 % of Revenue (Spend)'
+      },
+      OCT: {
+        revenue: 'OCT-25 REVENUE',
+        spend: 'OCT-25 ADVT SPEND',
+        share: 'OCT-25 % of Revenue (Spend)'
+      },
+      NOV: {
+        revenue: 'NOV-25 REVENUE',
+        spend: 'NOV-25 ADVT SPEND',
+        share: 'NOV-25 % of Revenue (Spend)'
+      },
+      DEC: {
+        revenue: 'DEC-25 REVENUE',
+        spend: 'DEC-25 ADVT SPEND',
+        share: '% of Revenue (Spend)'
+      }
+    };
+
+    const totalColumnKeys = {
+      revenue: 'TOTAL_REVENUE',
+      spend: 'TOTAL_AD_SPEND',
+      share: 'TOTAL_%_OF_REVENUE'
+    };
+
+    const initializeMonthFilter = () => {
+      const monthFilter = document.getElementById('monthFilter');
+      const monthMenu = document.getElementById('monthFilterMenu');
+      monthMenu.innerHTML = '';
+      const storedMonths = localStorage.getItem(monthStorageKey);
+      let parsed = null;
+      if (storedMonths) {
+        try {
+          parsed = JSON.parse(storedMonths);
+        } catch (error) {
+          parsed = [storedMonths];
+        }
+      }
+      const validMonths = Array.isArray(parsed)
+        ? parsed.filter((month) => monthOptions.some((option) => option.value === month))
+        : [];
+      const defaultMonths = validMonths.length ? validMonths : ['ALL'];
+      state.selectedMonths = defaultMonths.includes('ALL') ? ['ALL'] : defaultMonths;
+      monthOptions.forEach((option) => {
+        const wrapper = document.createElement('label');
+        wrapper.className = 'multi-select-option';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = option.value;
+        checkbox.checked = state.selectedMonths.includes(option.value);
+        const text = document.createElement('span');
+        text.textContent = option.label;
+        wrapper.appendChild(checkbox);
+        wrapper.appendChild(text);
+        monthMenu.appendChild(wrapper);
+      });
+      updateMonthFilterLabel();
+      monthFilter.classList.remove('is-open');
+      document.getElementById('monthFilterTrigger').setAttribute('aria-expanded', 'false');
+    };
+
+    const isMonthColumnKey = (key) => key === '% of Revenue (Spend)' || monthRegex.test(key);
+
+    const getMonthLabel = (monthValue) => {
+      const option = monthOptions.find((item) => item.value === monthValue);
+      return option ? option.label : monthValue;
+    };
+
+    const getMonthSelectionState = () => {
+      const selectedMonths = state.selectedMonths.length ? state.selectedMonths : ['ALL'];
+      const isAllSelected = selectedMonths.includes('ALL');
+      const isSingleMonth = selectedMonths.length === 1 && !isAllSelected;
+      const isMultiMonth = selectedMonths.length > 1 && !isAllSelected;
+      const monthsForTotal = isAllSelected
+        ? monthOptions.filter((option) => option.value !== 'ALL').map((option) => option.value)
+        : selectedMonths;
+      return {
+        selectedMonths,
+        isAllSelected,
+        isSingleMonth,
+        isMultiMonth,
+        monthsForTotal
+      };
+    };
+
+    const updateMonthFilterLabel = () => {
+      const trigger = document.getElementById('monthFilterTrigger');
+      const { selectedMonths, isAllSelected, isMultiMonth } = getMonthSelectionState();
+      if (isAllSelected) {
+        trigger.textContent = 'All months';
+        return;
+      }
+      if (isMultiMonth) {
+        trigger.textContent = 'Multiple months selected';
+        return;
+      }
+      trigger.textContent = selectedMonths.map((month) => getMonthLabel(month)).join(', ') || 'All months';
+    };
+
+    const getAggregateLabelSuffix = () => {
+      const { selectedMonths, isAllSelected } = getMonthSelectionState();
+      if (isAllSelected) return 'ALL MONTHS';
+      return selectedMonths.map((month) => getMonthLabel(month)).join(', ');
+    };
+
+    const getVisibleColumns = () => {
+      const { isSingleMonth, isMultiMonth, isAllSelected, selectedMonths } = getMonthSelectionState();
+      if (isSingleMonth) {
+        const selectedMonth = selectedMonths[0];
+        const selectedKeys = monthColumnKeyMap[selectedMonth] || monthColumnKeyMap.JAN;
+        return tableColumns.filter(({ key }) => {
+          if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
+          if (Object.values(selectedKeys).includes(key)) return true;
+          if (isMonthColumnKey(key)) return false;
+          if (Object.values(totalColumnKeys).includes(key)) return false;
+          return true;
+        }).map((column) => {
+          if (column.key === selectedKeys.revenue) {
+            return { ...column, label: `${getMonthLabel(selectedMonth)} REVENUE` };
+          }
+          if (column.key === selectedKeys.spend) {
+            return { ...column, label: `${getMonthLabel(selectedMonth)} ADVT SPEND` };
+          }
+          if (column.key === selectedKeys.share) {
+            return { ...column, label: `${getMonthLabel(selectedMonth)} % OF REVENUE` };
+          }
+          return column;
+        });
+      }
+
+      if (isMultiMonth || isAllSelected) {
+        const suffix = getAggregateLabelSuffix();
+        return tableColumns.filter(({ key }) => {
+          if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
+          if (isMonthColumnKey(key)) return false;
+          if (Object.values(totalColumnKeys).includes(key)) return true;
+          return !Object.values(totalColumnKeys).includes(key);
+        }).map((column) => {
+          if (column.key === totalColumnKeys.revenue) {
+            return { ...column, label: `TOTAL REVENUE (${suffix})` };
+          }
+          if (column.key === totalColumnKeys.spend) {
+            return { ...column, label: `TOTAL AD SPEND (${suffix})` };
+          }
+          if (column.key === totalColumnKeys.share) {
+            return { ...column, label: `TOTAL % OF REVENUE (${suffix})` };
+          }
+          return column;
+        });
+      }
+
+      return tableColumns;
+    };
+
+    const renderTable = () => {
+      const tableHead = document.getElementById('tableHead');
+      const tableBody = document.getElementById('tableBody');
+      const displayRows = getDisplayRows();
+      const start = (state.currentPage - 1) * state.pageSize;
+      const pageRows = displayRows.slice(start, start + state.pageSize);
+      const visibleColumns = getVisibleColumns();
+      const columnAlignments = getColumnAlignments(visibleColumns, state.rows);
+
+      tableHead.innerHTML = '';
+      visibleColumns.forEach(({ key, label }, index) => {
+        const th = document.createElement('th');
+        th.textContent = label;
+        th.dataset.colIndex = String(index);
+        th.classList.add(columnAlignments[key]);
+        th.addEventListener('click', () => sortRows(key));
+        tableHead.appendChild(th);
+      });
+
+      tableBody.innerHTML = '';
+      pageRows.forEach((row) => {
+        const tr = document.createElement('tr');
+        visibleColumns.forEach(({ key }, index) => {
+          const td = document.createElement('td');
+          td.dataset.colIndex = String(index);
+          td.classList.add(columnAlignments[key]);
+          if (key.includes('Signal')) {
+            const pill = document.createElement('span');
+            const value = row[key] || '-';
+            pill.textContent = value;
+            pill.className = `pill ${getSignalPillClass(value)}`;
+            td.appendChild(pill);
+          } else if (key.includes('Action')) {
+            const pill = document.createElement('span');
+            const value = row[key] || '-';
+            pill.textContent = value;
+            pill.className = `pill ${getActionPillClass(value)}`;
+            td.appendChild(pill);
+          } else {
+            const cellValue = getRowValue(row, key);
+            if (typeof cellValue === 'number') {
+              if (key.includes('%')) {
+                td.textContent = formatPercent(cellValue, { assumeRatio: true });
+              } else {
+                td.textContent = formatCurrency(cellValue);
+              }
+            } else {
+              td.textContent = cellValue || '-';
+            }
+          }
+          tr.appendChild(td);
+        });
+        tableBody.appendChild(tr);
+      });
+
+      document.getElementById('rowCount').textContent = `${displayRows.length} rows`;
+      renderPagination(displayRows.length);
+    };
+
+    const isNumericValue = (value) => typeof value === 'number' && Number.isFinite(value);
+
+    const getColumnAlignments = (columns, rows) => {
+      const alignments = {};
+      columns.forEach(({ key }) => {
+        if (Object.values(totalColumnKeys).includes(key)) {
+          alignments[key] = 'align-right';
+          return;
+        }
+        const values = rows
+          .map((row) => row[key])
+          .filter((value) => value !== null && value !== undefined);
+        const isNumeric = values.length > 0 && values.every((value) => isNumericValue(value));
+        alignments[key] = isNumeric ? 'align-right' : 'align-center';
+      });
+      return alignments;
+    };
+
+    const sortRows = (key, dir = null, update = true) => {
+      state.sortKey = key;
+      if (dir) {
+        state.sortDir = dir;
+      } else {
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      }
+      if (update) {
+        renderTable();
+      }
+    };
+
+    const renderPagination = (totalRows) => {
+      const pagination = document.getElementById('pagination');
+      const totalPages = Math.ceil(totalRows / state.pageSize);
+      pagination.innerHTML = '';
+      const info = document.createElement('span');
+      info.className = 'muted';
+      info.textContent = `Page ${state.currentPage} of ${totalPages || 1}`;
+      pagination.appendChild(info);
+      if (totalPages <= 1) return;
+
+      const prev = document.createElement('button');
+      prev.textContent = 'Previous';
+      prev.disabled = state.currentPage === 1;
+      prev.addEventListener('click', () => {
+        state.currentPage -= 1;
+        renderTable();
+      });
+      pagination.appendChild(prev);
+
+      const next = document.createElement('button');
+      next.textContent = 'Next';
+      next.disabled = state.currentPage === totalPages;
+      next.addEventListener('click', () => {
+        state.currentPage += 1;
+        renderTable();
+      });
+      pagination.appendChild(next);
+    };
+
+    const downloadCsv = () => {
+      const visibleColumns = getVisibleColumns();
+      const lines = [visibleColumns.map(({ label }) => label).join(',')];
+      state.filtered.forEach((row) => {
+        const line = visibleColumns.map(({ key }) => {
+          const value = getRowValue(row, key) ?? '';
+          return `"${String(value).replace(/"/g, '""')}"`;
+        });
+        lines.push(line.join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'sku-wise-ad-spend.csv';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    };
+
+    document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+    document.getElementById('skuFilter').addEventListener('change', applyFilters);
+    document.getElementById('lo1Filter').addEventListener('change', applyFilters);
+    document.getElementById('signalAmzFilter').addEventListener('change', applyFilters);
+    document.getElementById('actionAmzFilter').addEventListener('change', applyFilters);
+    document.getElementById('signalFilter').addEventListener('change', applyFilters);
+    document.getElementById('actionFilter').addEventListener('change', applyFilters);
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('resetFilters').addEventListener('click', resetFilters);
+    document.getElementById('downloadCsv').addEventListener('click', downloadCsv);
+    document.getElementById('monthFilterTrigger').addEventListener('click', () => {
+      const monthFilter = document.getElementById('monthFilter');
+      const isOpen = monthFilter.classList.toggle('is-open');
+      document.getElementById('monthFilterTrigger').setAttribute('aria-expanded', String(isOpen));
+    });
+    document.getElementById('monthFilterMenu').addEventListener('change', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
+      const checkboxes = Array.from(document.querySelectorAll('#monthFilterMenu input[type="checkbox"]'));
+      if (target.value === 'ALL' && target.checked) {
+        checkboxes.forEach((checkbox) => {
+          checkbox.checked = checkbox.value === 'ALL';
+        });
+        state.selectedMonths = ['ALL'];
+      } else {
+        checkboxes.forEach((checkbox) => {
+          if (checkbox.value === 'ALL') {
+            checkbox.checked = false;
+          }
+        });
+        const selected = checkboxes.filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value);
+        state.selectedMonths = selected.length ? selected : ['ALL'];
+        if (state.selectedMonths.includes('ALL')) {
+          checkboxes.forEach((checkbox) => {
+            checkbox.checked = checkbox.value === 'ALL';
+          });
+        }
+      }
+      updateMonthFilterLabel();
+      localStorage.setItem(monthStorageKey, JSON.stringify(state.selectedMonths));
+      renderTable();
+    });
+    document.addEventListener('click', (event) => {
+      const monthFilter = document.getElementById('monthFilter');
+      if (!monthFilter.contains(event.target)) {
+        monthFilter.classList.remove('is-open');
+        document.getElementById('monthFilterTrigger').setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.getElementById('rankDirection').addEventListener('change', (event) => {
+      state.rankMode = event.target.value;
+      state.currentPage = 1;
+      renderTable();
+    });
+    document.getElementById('rankCount').addEventListener('input', (event) => {
+      const value = Number.parseInt(event.target.value, 10);
+      state.rankCount = Number.isFinite(value) && value > 0 ? value : null;
+      state.currentPage = 1;
+      renderTable();
+    });
+    const viewToggle = document.getElementById('viewToggle');
+    const skuTable = document.getElementById('skuTable');
+    const chartSection = document.getElementById('chartSection');
+    const tableContent = document.getElementById('tableContent');
+    let activeColumn = null;
+
+    const clearColumnHover = () => {
+      if (activeColumn === null) return;
+      skuTable.querySelectorAll(`[data-col-index="${activeColumn}"]`).forEach((cell) => {
+        cell.classList.remove('col-hover');
+      });
+      activeColumn = null;
+    };
+
+    const setColumnHover = (colIndex) => {
+      if (activeColumn === colIndex) return;
+      clearColumnHover();
+      activeColumn = colIndex;
+      skuTable.querySelectorAll(`[data-col-index="${colIndex}"]`).forEach((cell) => {
+        cell.classList.add('col-hover');
+      });
+    };
+
+    skuTable.addEventListener('mouseover', (event) => {
+      const cell = event.target.closest('th, td');
+      if (!cell || !skuTable.contains(cell)) return;
+      const { colIndex } = cell.dataset;
+      if (colIndex === undefined) return;
+      setColumnHover(colIndex);
+    });
+
+    skuTable.addEventListener('mouseleave', () => {
+      clearColumnHover();
+    });
+
+    const setView = (view) => {
+      const isTableView = view === 'table';
+      tableContent.classList.toggle('is-hidden', !isTableView);
+      chartSection.classList.toggle('is-hidden', isTableView);
+      viewToggle.textContent = isTableView ? 'Graph View' : 'Table View';
+    };
+
+    viewToggle.addEventListener('click', () => {
+      const isTableVisible = !tableContent.classList.contains('is-hidden');
+      setView(isTableVisible ? 'graph' : 'table');
+    });
+
+    setView('table');
+
+    initializeMonthFilter();
+    loadData();
+  </script>
+</body>
+</html>
