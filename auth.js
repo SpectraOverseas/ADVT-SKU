@@ -1,4 +1,4 @@
-const dashboardUrl = 'dashboard-select.html';
+const dashboardUrl = 'SKU WISE AD SPEND.html';
 const loginForm = document.getElementById('loginForm');
 const errorMessage = document.getElementById('errorMessage');
 
