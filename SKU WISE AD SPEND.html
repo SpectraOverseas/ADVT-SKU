@@ -605,6 +605,32 @@
 
     const safeNumber = (value) => (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
 
+    const getAmzSignal = ({ spend, revenue, share }) => {
+      if (spend > 0 && revenue === 0) return 'Only Spent';
+      if (share === 0) return 'Not Spent';
+      if (share > 0.5) return 'Very Risky';
+      if (share > 0.3) return 'High Risk';
+      if (share >= 0.04) return 'Risky';
+      if (share < 0.02) return 'Very Good';
+      if (share < 0.04) return 'Good';
+      return 'Good';
+    };
+
+    const getAmzAction = (signal) => {
+      switch (signal) {
+        case 'Very Risky':
+          return 'Stop Immediately';
+        case 'High Risk':
+          return 'Urgently Optimize';
+        case 'Risky':
+          return 'Review Campaign';
+        case 'Only Spent':
+          return 'Check Only Spent';
+        default:
+          return 'Good For Now';
+      }
+    };
+
     const getSignalPillClass = (value) => {
       if (!value) return 'signal-unknown';
       switch (String(value).trim().toLowerCase()) {
@@ -726,11 +752,13 @@
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
 
       state.filtered = state.rows.filter((row) => {
+        const dynamicSignalAmz = getDynamicAmzSignal(row);
+        const dynamicActionAmz = getDynamicAmzAction(row);
         if (category && row['CAT'] !== category) return false;
         if (sku && row['SKU PLAIN'] !== sku) return false;
         if (lo1 && row['LO-1'] !== lo1) return false;
-        if (signalAmz && row['Signal(AMZ)'] !== signalAmz) return false;
-        if (actionAmz && row['Action(AMZ)'] !== actionAmz) return false;
+        if (signalAmz && dynamicSignalAmz !== signalAmz) return false;
+        if (actionAmz && dynamicActionAmz !== actionAmz) return false;
         if (signal && row['Signal 2025'] !== signal) return false;
         if (action && row['Action 2025'] !== action) return false;
         if (search && !String(row['SKU PLAIN']).toLowerCase().includes(search)) return false;
@@ -888,6 +916,12 @@
     };
 
     const getRowValue = (row, key) => {
+      if (key === 'Signal(AMZ)') {
+        return getDynamicAmzSignal(row);
+      }
+      if (key === 'Action(AMZ)') {
+        return getDynamicAmzAction(row);
+      }
       if (Object.values(totalColumnKeys).includes(key)) {
         const { monthsForTotal } = getMonthSelectionState();
         const totals = monthsForTotal.reduce(
@@ -1136,6 +1170,28 @@
       };
     };
 
+    const getDynamicAmzTotals = (row) => {
+      const { monthsForTotal } = getMonthSelectionState();
+      return monthsForTotal.reduce(
+        (acc, month) => {
+          const monthKeys = monthColumnKeyMap[month];
+          if (!monthKeys) return acc;
+          acc.revenue += safeNumber(row[monthKeys.revenue]);
+          acc.spend += safeNumber(row[monthKeys.spend]);
+          return acc;
+        },
+        { revenue: 0, spend: 0 }
+      );
+    };
+
+    const getDynamicAmzSignal = (row) => {
+      const totals = getDynamicAmzTotals(row);
+      const share = totals.revenue ? totals.spend / totals.revenue : 0;
+      return getAmzSignal({ spend: totals.spend, revenue: totals.revenue, share });
+    };
+
+    const getDynamicAmzAction = (row) => getAmzAction(getDynamicAmzSignal(row));
+
     const updateMonthFilterLabel = () => {
       const trigger = document.getElementById('monthFilterTrigger');
       const { selectedMonths, isAllSelected, isMultiMonth } = getMonthSelectionState();
@@ -1233,13 +1289,13 @@
           td.classList.add(columnAlignments[key]);
           if (key.includes('Signal')) {
             const pill = document.createElement('span');
-            const value = row[key] || '-';
+            const value = getRowValue(row, key) || '-';
             pill.textContent = value;
             pill.className = `pill ${getSignalPillClass(value)}`;
             td.appendChild(pill);
           } else if (key.includes('Action')) {
             const pill = document.createElement('span');
-            const value = row[key] || '-';
+            const value = getRowValue(row, key) || '-';
             pill.textContent = value;
             pill.className = `pill ${getActionPillClass(value)}`;
             td.appendChild(pill);
@@ -1381,7 +1437,7 @@
       }
       updateMonthFilterLabel();
       localStorage.setItem(monthStorageKey, JSON.stringify(state.selectedMonths));
-      renderTable();
+      applyFilters();
     });
     document.addEventListener('click', (event) => {
       const monthFilter = document.getElementById('monthFilter');
