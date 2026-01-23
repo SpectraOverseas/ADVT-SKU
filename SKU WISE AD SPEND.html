@@ -470,12 +470,12 @@
     <section class="panel">
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-title">DEC-25 Revenue</div>
+          <div class="kpi-title" id="kpiRevenueTitle">Total Revenue</div>
           <div class="kpi-value" id="kpiRevenue">-</div>
           <div class="kpi-sub" id="kpiRevenueRows">-</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-title">DEC-25 Ad Spend</div>
+          <div class="kpi-title" id="kpiSpendTitle">Total Ad Spend</div>
           <div class="kpi-value" id="kpiSpend">-</div>
           <div class="kpi-sub" id="kpiSpendShare">-</div>
         </div>
@@ -797,16 +797,22 @@
     };
 
     const updateKPIs = () => {
-      const revenue = state.filtered.reduce((acc, row) => acc + safeNumber(row['DEC-25 REVENUE']), 0);
-      const spend = state.filtered.reduce((acc, row) => acc + safeNumber(row['DEC-25 ADVT SPEND']), 0);
+      const revenue = state.filtered.reduce((acc, row) => acc + safeNumber(getRowValue(row, totalColumnKeys.revenue)), 0);
+      const spend = state.filtered.reduce((acc, row) => acc + safeNumber(getRowValue(row, totalColumnKeys.spend)), 0);
       const revenue2025 = state.filtered.reduce((acc, row) => acc + safeNumber(row['REVENUE 2025']), 0);
       const spend2025 = state.filtered.reduce((acc, row) => acc + safeNumber(row['ADVT SPEND 2025']), 0);
 
       const weightedShare = revenue ? (spend / revenue) * 100 : 0;
       const spendShare2025 = revenue2025 ? (spend2025 / revenue2025) * 100 : 0;
+      const { isSingleMonth, selectedMonths } = getMonthSelectionState();
+      const monthLabel = isSingleMonth ? getMonthLabel(selectedMonths[0]) : null;
+      const revenueTitle = monthLabel ? `${monthLabel} Revenue` : 'Total Revenue';
+      const spendTitle = monthLabel ? `${monthLabel} Ad Spend` : 'Total Ad Spend';
 
+      document.getElementById('kpiRevenueTitle').textContent = revenueTitle;
       document.getElementById('kpiRevenue').textContent = formatKpiCurrency(revenue);
       document.getElementById('kpiRevenueRows').textContent = `${state.filtered.length} SKUs`;
+      document.getElementById('kpiSpendTitle').textContent = spendTitle;
       document.getElementById('kpiSpend').textContent = formatKpiCurrency(spend);
       document.getElementById('kpiSpendShare').textContent = `${formatPercent(weightedShare)} of revenue`;
       document.getElementById('kpiShare').textContent = formatKpiPercent(weightedShare);
