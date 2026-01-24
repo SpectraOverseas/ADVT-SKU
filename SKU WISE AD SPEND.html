@@ -510,7 +510,7 @@
           <label for="monthFilter">Month</label>
           <div class="multi-select" id="monthFilter">
             <button class="multi-select-trigger" type="button" id="monthFilterTrigger" aria-haspopup="listbox" aria-expanded="false">
-              All months
+              All Available Months
             </button>
             <div class="multi-select-menu" id="monthFilterMenu" role="listbox" aria-multiselectable="true"></div>
           </div>
@@ -650,7 +650,7 @@
     let signalYearKey = null;
     let actionYearKey = null;
     let monthOptions = [];
-    let monthRegex = null;
+    let monthRegex = /$^/;
     let monthColumnKeyMap = {};
     let totalColumnKeys = {};
     let monthStorageKey = null;
@@ -809,30 +809,86 @@
       return updated;
     };
 
-    const buildYearConfig = (year) => {
-      const suffix = String(year).slice(-2);
-      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-      const options = [
-        { value: 'ALL', label: 'ALL' },
-        ...months.map((month) => ({ value: month, label: `${month}-${suffix}` }))
-      ];
-      const columnMap = months.reduce((acc, month) => {
-        if (month === 'DEC') {
-          acc[month] = {
-            revenue: `DEC-${suffix} REVENUE`,
-            spend: `DEC-${suffix} ADVT SPEND`,
-            share: '% of Revenue (Spend)'
-          };
-        } else {
-          acc[month] = {
-            revenue: `${month}-${suffix} REVENUE`,
-            spend: `${month}-${suffix} ADVT SPEND`,
-            share: `${month}-${suffix} % of Revenue (Spend)`
-          };
+    const monthOrder = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const allMonthsLabel = 'All Available Months';
+
+    const extractAvailableMonths = (headers, suffix) => {
+      const monthSet = new Set();
+      const monthPattern = new RegExp(`\\b(${monthOrder.join('|')})-${suffix}\\b`);
+      headers.forEach((header) => {
+        const match = String(header).match(monthPattern);
+        if (match) {
+          monthSet.add(`${match[1]}-${suffix}`);
         }
+      });
+      const headerSet = new Set(headers);
+      return [...monthSet]
+        .filter((month) => headerSet.has(`${month} REVENUE`) || headerSet.has(`${month} ADVT SPEND`))
+        .sort((a, b) => monthOrder.indexOf(a.split('-')[0]) - monthOrder.indexOf(b.split('-')[0]));
+    };
+
+    const buildMonthColumnKeyMap = (headers, months) => {
+      const headerSet = new Set(headers);
+      return months.reduce((acc, month) => {
+        const revenueKey = `${month} REVENUE`;
+        const spendKey = `${month} ADVT SPEND`;
+        const monthShareKey = `${month} % of Revenue (Spend)`;
+        let shareKey = monthShareKey;
+        if (headerSet.has(monthShareKey)) {
+          shareKey = monthShareKey;
+        } else if (headerSet.has('% of Revenue (Spend)')) {
+          shareKey = '% of Revenue (Spend)';
+        }
+        acc[month] = { revenue: revenueKey, spend: spendKey, share: shareKey };
         return acc;
       }, {});
+    };
 
+    const buildMonthOptions = (months) => ([
+      { value: 'ALL', label: allMonthsLabel },
+      ...months.map((month) => ({ value: month, label: month }))
+    ]);
+
+    const buildTableColumns = (year, months, monthMap) => {
+      const monthColumns = [];
+      const seenMonthKeys = new Set();
+
+      months.forEach((month) => {
+        const monthKeys = monthMap[month];
+        if (!monthKeys) return;
+        [monthKeys.revenue, monthKeys.spend, monthKeys.share].forEach((key, index) => {
+          if (!key || seenMonthKeys.has(key)) return;
+          seenMonthKeys.add(key);
+          if (index === 0) {
+            monthColumns.push({ key, label: `${month} REVENUE` });
+          } else if (index === 1) {
+            monthColumns.push({ key, label: `${month} ADVT SPEND` });
+          } else {
+            monthColumns.push({ key, label: '% of Revenue (Spend)' });
+          }
+        });
+      });
+
+      return [
+        { key: 'CAT', label: 'CAT' },
+        { key: 'SKU PLAIN', label: 'SKU PLAIN' },
+        { key: 'LO-1', label: 'LO-1' },
+        { key: 'TOTAL_AD_SPEND', label: 'TOTAL AD SPEND' },
+        { key: 'TOTAL_REVENUE', label: 'TOTAL REVENUE' },
+        { key: 'TOTAL_%_OF_REVENUE', label: 'TOTAL % OF REVENUE' },
+        ...monthColumns,
+        { key: 'Signal(AMZ)', label: 'Signal(AMZ)' },
+        { key: 'Action(AMZ)', label: 'Action(AMZ)' },
+        { key: `ADVT SPEND ${year}`, label: `ADVT SPEND ${year}` },
+        { key: `REVENUE ${year}`, label: `REVENUE ${year}` },
+        { key: `% of Revenue ${year}`, label: `% of Revenue ${year}` },
+        { key: `Signal ${year}`, label: `Signal ${year}` },
+        { key: `Action ${year}`, label: `Action ${year}` }
+      ];
+    };
+
+    const buildYearConfig = (year) => {
+      const suffix = String(year).slice(-2);
       return {
         year,
         suffix,
@@ -844,49 +900,13 @@
         percentRevenueYearKey: `% of Revenue ${year}`,
         signalYearKey: `Signal ${year}`,
         actionYearKey: `Action ${year}`,
-        monthOptions: options,
-        monthRegex: new RegExp(`^(${months.join('|')})-${suffix} `),
-        monthColumnKeyMap: columnMap,
         totalColumnKeys: {
           revenue: 'TOTAL_REVENUE',
           spend: 'TOTAL_AD_SPEND',
           share: 'TOTAL_%_OF_REVENUE'
         },
-        monthStorageKey: `skuWiseSelectedMonth-${year}`,
-        tableColumns: buildTableColumns(year, suffix)
+        monthStorageKey: `skuWiseSelectedMonth-${year}`
       };
-    };
-
-    const buildTableColumns = (year, suffix) => {
-      const monthColumns = [];
-      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV'];
-      months.forEach((month) => {
-        monthColumns.push(
-          { key: `${month}-${suffix} REVENUE`, label: `${month}-${suffix} REVENUE` },
-          { key: `${month}-${suffix} ADVT SPEND`, label: `${month}-${suffix} ADVT SPEND` },
-          { key: `${month}-${suffix} % of Revenue (Spend)`, label: '% of Revenue (Spend)' }
-        );
-      });
-
-      return [
-        { key: 'CAT', label: 'CAT' },
-        { key: 'SKU PLAIN', label: 'SKU PLAIN' },
-        { key: 'LO-1', label: 'LO-1' },
-        { key: 'TOTAL_AD_SPEND', label: 'TOTAL AD SPEND' },
-        { key: 'TOTAL_REVENUE', label: 'TOTAL REVENUE' },
-        { key: 'TOTAL_%_OF_REVENUE', label: 'TOTAL % OF REVENUE' },
-        ...monthColumns,
-        { key: `DEC-${suffix} REVENUE`, label: `DEC-${suffix} REVENUE` },
-        { key: `DEC-${suffix} ADVT SPEND`, label: `DEC-${suffix} ADVT SPEND` },
-        { key: '% of Revenue (Spend)', label: '% of Revenue (Spend)' },
-        { key: 'Signal(AMZ)', label: 'Signal(AMZ)' },
-        { key: 'Action(AMZ)', label: 'Action(AMZ)' },
-        { key: `ADVT SPEND ${year}`, label: `ADVT SPEND ${year}` },
-        { key: `REVENUE ${year}`, label: `REVENUE ${year}` },
-        { key: `% of Revenue ${year}`, label: `% of Revenue ${year}` },
-        { key: `Signal ${year}`, label: `Signal ${year}` },
-        { key: `Action ${year}`, label: `Action ${year}` }
-      ];
     };
 
     const applyYearConfig = (year) => {
@@ -900,12 +920,8 @@
       percentRevenueYearKey = config.percentRevenueYearKey;
       signalYearKey = config.signalYearKey;
       actionYearKey = config.actionYearKey;
-      monthOptions = config.monthOptions;
-      monthRegex = config.monthRegex;
-      monthColumnKeyMap = config.monthColumnKeyMap;
       totalColumnKeys = config.totalColumnKeys;
       monthStorageKey = config.monthStorageKey;
-      tableColumns = config.tableColumns;
       topBottomMetric = revenueYearKey;
 
       const decLabel = `DEC-${yearSuffix}`;
@@ -961,7 +977,6 @@
         shareChart = null;
       }
 
-      initializeMonthFilter();
       setView('table');
     };
 
@@ -995,7 +1010,15 @@
       const response = await fetch(dataUrl, { cache: 'no-store' });
       const payload = await response.json();
       state.headers = Object.values(payload.headers);
+      const months = extractAvailableMonths(state.headers, yearSuffix);
+      monthOptions = buildMonthOptions(months);
+      monthColumnKeyMap = buildMonthColumnKeyMap(state.headers, months);
+      monthRegex = months.length
+        ? new RegExp(`^(${months.map((month) => month.replace('-', '\\-')).join('|')}) `)
+        : /$^/;
+      tableColumns = buildTableColumns(selectedYear, months, monthColumnKeyMap);
       state.rows = applyLo1Lookup(payload.rows || [], payload.lookup?.lo1BySku);
+      initializeMonthFilter();
       initializeFilters();
       applyFilters();
     };
@@ -1261,7 +1284,10 @@
       const validMonths = Array.isArray(parsed)
         ? parsed.filter((month) => monthOptions.some((option) => option.value === month))
         : [];
-      const defaultMonths = validMonths.length ? validMonths : ['ALL'];
+      const availableMonths = monthOptions.filter((option) => option.value !== 'ALL').map((option) => option.value);
+      const defaultMonths = validMonths.length
+        ? validMonths
+        : (availableMonths.length === 1 ? [availableMonths[0]] : ['ALL']);
       state.selectedMonths = defaultMonths.includes('ALL') ? ['ALL'] : defaultMonths;
       monthOptions.forEach((option) => {
         const wrapper = document.createElement('label');
@@ -1331,14 +1357,14 @@
       const trigger = document.getElementById('monthFilterTrigger');
       const { selectedMonths, isAllSelected, isMultiMonth } = getMonthSelectionState();
       if (isAllSelected) {
-        trigger.textContent = 'All months';
+        trigger.textContent = allMonthsLabel;
         return;
       }
       if (isMultiMonth) {
         trigger.textContent = 'Multiple months selected';
         return;
       }
-      trigger.textContent = selectedMonths.map((month) => getMonthLabel(month)).join(', ') || 'All months';
+      trigger.textContent = selectedMonths.map((month) => getMonthLabel(month)).join(', ') || allMonthsLabel;
     };
 
     const getAggregateLabelSuffix = () => {
@@ -1351,7 +1377,11 @@
       const { isSingleMonth, isMultiMonth, isAllSelected, selectedMonths } = getMonthSelectionState();
       if (isSingleMonth) {
         const selectedMonth = selectedMonths[0];
-        const selectedKeys = monthColumnKeyMap[selectedMonth] || monthColumnKeyMap.JAN;
+        const fallbackMonth = monthOptions.find((option) => option.value !== 'ALL')?.value;
+        const selectedKeys = monthColumnKeyMap[selectedMonth] || (fallbackMonth ? monthColumnKeyMap[fallbackMonth] : null);
+        if (!selectedKeys) {
+          return tableColumns;
+        }
         return tableColumns.filter(({ key }) => {
           if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
           if (Object.values(selectedKeys).includes(key)) return true;
