@@ -1,4 +1,4 @@
-const selectionUrl = 'selection.html';
+const dashboardUrl = 'SKU WISE AD SPEND.html';
 const loginForm = document.getElementById('loginForm');
 const errorMessage = document.getElementById('errorMessage');
 
@@ -31,12 +31,12 @@ const authenticateUser = async (username, password) => {
   return users.some((user) => user.username === username && user.password === hashedPassword);
 };
 
-const redirectToSelection = () => {
-  window.location.href = selectionUrl;
+const redirectToDashboard = () => {
+  window.location.href = dashboardUrl;
 };
 
 if (sessionStorage.getItem('isAuthenticated') === 'true') {
-  redirectToSelection();
+  redirectToDashboard();
 }
 
 loginForm.addEventListener('submit', async (event) => {
@@ -55,7 +55,7 @@ loginForm.addEventListener('submit', async (event) => {
     const isValid = await authenticateUser(username, password);
     if (isValid) {
       sessionStorage.setItem('isAuthenticated', 'true');
-      redirectToSelection();
+      redirectToDashboard();
     } else {
       showError('Invalid username or password.');
     }
