@@ -949,8 +949,8 @@
       dashboardTitle.textContent = `SKU Wise Ad Spend ${year}`;
       signalFilterLabel.textContent = `Signal ${year}`;
       actionFilterLabel.textContent = `Action ${year}`;
-      kpiDecRevenueLabel.textContent = `${decLabel} Revenue`;
-      kpiDecSpendLabel.textContent = `${decLabel} Ad Spend`;
+      kpiDecRevenueLabel.textContent = 'All Months Revenue';
+      kpiDecSpendLabel.textContent = 'All Months Ad Spend';
       kpiRevenueYearLabel.textContent = `Revenue ${year}`;
       kpiSpendYearLabel.textContent = `Ad Spend ${year}`;
       chartRevenueTitle.textContent = `Top SKUs by ${decLabel} Revenue`;
@@ -1136,15 +1136,60 @@
       applyFilters();
     };
 
+    const getOrderedSelectedMonths = (months) => monthOptions
+      .filter((option) => option.value !== 'ALL' && months.includes(option.value))
+      .map((option) => option.value);
+
+    const getMonthTitleLabel = () => {
+      const { selectedMonths, isAllSelected, isMultiMonth, isSingleMonth, monthsForTotal } = getMonthSelectionState();
+      if (isAllSelected) return 'All Months';
+      const orderedMonths = getOrderedSelectedMonths(monthsForTotal);
+      if (isSingleMonth) {
+        const singleMonth = orderedMonths[0] ?? selectedMonths[0];
+        return getMonthLabel(singleMonth);
+      }
+      if (isMultiMonth) {
+        const first = orderedMonths[0];
+        const last = orderedMonths[orderedMonths.length - 1];
+        if (first && last) {
+          const firstLabel = getMonthLabel(first);
+          const lastLabel = getMonthLabel(last);
+          return firstLabel === lastLabel ? firstLabel : `${firstLabel}–${lastLabel}`;
+        }
+        return selectedMonths.map((month) => getMonthLabel(month)).join(', ');
+      }
+      return 'All Months';
+    };
+
+    const updateKpiTitles = () => {
+      const monthTitle = getMonthTitleLabel();
+      kpiDecRevenueLabel.textContent = `${monthTitle} Revenue`;
+      kpiDecSpendLabel.textContent = `${monthTitle} Ad Spend`;
+    };
+
     const updateKPIs = () => {
-      const revenue = state.filtered.reduce((acc, row) => acc + safeNumber(row[decRevenueKey]), 0);
-      const spend = state.filtered.reduce((acc, row) => acc + safeNumber(row[decSpendKey]), 0);
+      const { monthsForTotal } = getMonthSelectionState();
+      const totals = state.filtered.reduce(
+        (acc, row) => {
+          monthsForTotal.forEach((month) => {
+            const monthKeys = monthColumnKeyMap[month];
+            if (!monthKeys) return;
+            acc.revenue += safeNumber(row[monthKeys.revenue]);
+            acc.spend += safeNumber(row[monthKeys.spend]);
+          });
+          return acc;
+        },
+        { revenue: 0, spend: 0 }
+      );
+      const revenue = totals.revenue;
+      const spend = totals.spend;
       const revenueByYear = state.filtered.reduce((acc, row) => acc + safeNumber(row[revenueYearKey]), 0);
       const spendByYear = state.filtered.reduce((acc, row) => acc + safeNumber(row[spendYearKey]), 0);
 
       const weightedShare = revenue ? (spend / revenue) * 100 : 0;
       const spendShareByYear = revenueByYear ? (spendByYear / revenueByYear) * 100 : 0;
 
+      updateKpiTitles();
       document.getElementById('kpiRevenue').textContent = formatKpiCurrency(revenue);
       document.getElementById('kpiRevenueRows').textContent = `${state.filtered.length} SKUs`;
       document.getElementById('kpiSpend').textContent = formatKpiCurrency(spend);
