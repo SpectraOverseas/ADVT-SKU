@@ -1377,36 +1377,9 @@
     };
 
     const getVisibleColumns = () => {
-      const { isSingleMonth, isMultiMonth, isAllSelected, selectedMonths } = getMonthSelectionState();
-      if (isSingleMonth) {
-        const selectedMonth = selectedMonths[0];
-        const fallbackMonth = monthOptions.find((option) => option.value !== 'ALL')?.value;
-        const selectedKeys = monthColumnKeyMap[selectedMonth] || (fallbackMonth ? monthColumnKeyMap[fallbackMonth] : null);
-        if (!selectedKeys) {
-          return tableColumns;
-        }
-        return tableColumns.filter(({ key }) => {
-          if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
-          if (Object.values(selectedKeys).includes(key)) return true;
-          if (isMonthColumnKey(key)) return false;
-          if (Object.values(totalColumnKeys).includes(key)) return false;
-          return true;
-        }).map((column) => {
-          if (column.key === selectedKeys.revenue) {
-            return { ...column, label: `${getMonthLabel(selectedMonth)} REVENUE` };
-          }
-          if (column.key === selectedKeys.spend) {
-            return { ...column, label: `${getMonthLabel(selectedMonth)} ADVT SPEND` };
-          }
-          if (column.key === selectedKeys.share) {
-            return { ...column, label: `${getMonthLabel(selectedMonth)} % OF REVENUE` };
-          }
-          return column;
-        });
-      }
-
-      if (isMultiMonth || isAllSelected) {
-        const suffix = getAggregateLabelSuffix();
+      const { isAllSelected, isMultiMonth, isSingleMonth } = getMonthSelectionState();
+      const suffix = getAggregateLabelSuffix();
+      if (isSingleMonth || isMultiMonth || isAllSelected) {
         return tableColumns.filter(({ key }) => {
           if (key === 'CAT' || key === 'SKU PLAIN' || key === 'LO-1') return true;
           if (isMonthColumnKey(key)) return false;
