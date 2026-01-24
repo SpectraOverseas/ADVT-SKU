@@ -436,6 +436,26 @@
       width: 100%;
     }
 
+    .year-buttons .year-option {
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid var(--border);
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .year-buttons .year-option:not(.is-selected):hover {
+      background: #f1f5f9;
+      border-color: var(--primary);
+    }
+
+    .year-buttons .year-option.is-selected {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      font-weight: 700;
+      cursor: default;
+    }
+
     @media (max-width: 720px) {
       header {
         padding: 20px 20px 24px;
@@ -462,8 +482,8 @@
       <h2 id="yearSelectionTitle">Select Year</h2>
       <p>Please choose the year to load the dashboard.</p>
       <div class="year-buttons">
-        <button class="btn" id="year2025Button" type="button">2025</button>
-        <button class="btn btn-outline" id="year2026Button" type="button">2026</button>
+        <button class="btn year-option" id="year2025Button" type="button">2025</button>
+        <button class="btn year-option" id="year2026Button" type="button">2026</button>
       </div>
     </div>
   </div>
@@ -980,8 +1000,21 @@
       setView('table');
     };
 
+    const updateYearSelectionButtons = () => {
+      const yearButtons = [
+        { year: 2025, button: year2025Button },
+        { year: 2026, button: year2026Button }
+      ];
+
+      yearButtons.forEach(({ year, button }) => {
+        const isSelected = selectedYear === year;
+        button.classList.toggle('is-selected', isSelected);
+        button.setAttribute('aria-pressed', String(isSelected));
+      });
+    };
+
     const showYearSelection = () => {
-      selectedYear = null;
+      updateYearSelectionButtons();
       yearSelection.classList.remove('is-hidden');
       yearSelection.style.display = 'flex';
       yearSelection.style.visibility = 'visible';
@@ -998,6 +1031,8 @@
 
     const loadDashboardForYear = (year) => {
       applyYearConfig(year);
+      updateYearSelectionButtons();
+      hideYearSelection();
       resetDashboardState();
       dashboardApp.classList.remove('is-hidden');
       loadData();
@@ -1649,12 +1684,10 @@
 
     year2025Button.addEventListener('click', () => {
       const year = 2025;
-      hideYearSelection();
       loadDashboardForYear(year);
     });
     year2026Button.addEventListener('click', () => {
       const year = 2026;
-      hideYearSelection();
       loadDashboardForYear(year);
     });
 
