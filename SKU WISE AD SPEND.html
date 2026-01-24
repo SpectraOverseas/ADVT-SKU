@@ -812,31 +812,31 @@
     const monthOrder = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     const allMonthsLabel = 'All Available Months';
 
-    const extractAvailableMonths = (headers, suffix) => {
+    const extractAvailableMonths = (columnKeys, suffix) => {
       const monthSet = new Set();
       const monthPattern = new RegExp(`\\b(${monthOrder.join('|')})-${suffix}\\b`);
-      headers.forEach((header) => {
-        const match = String(header).match(monthPattern);
+      columnKeys.forEach((key) => {
+        const match = String(key).match(monthPattern);
         if (match) {
           monthSet.add(`${match[1]}-${suffix}`);
         }
       });
-      const headerSet = new Set(headers);
+      const columnSet = new Set(columnKeys);
       return [...monthSet]
-        .filter((month) => headerSet.has(`${month} REVENUE`) || headerSet.has(`${month} ADVT SPEND`))
+        .filter((month) => columnSet.has(`${month} REVENUE`) || columnSet.has(`${month} ADVT SPEND`))
         .sort((a, b) => monthOrder.indexOf(a.split('-')[0]) - monthOrder.indexOf(b.split('-')[0]));
     };
 
-    const buildMonthColumnKeyMap = (headers, months) => {
-      const headerSet = new Set(headers);
+    const buildMonthColumnKeyMap = (columnKeys, months) => {
+      const columnSet = new Set(columnKeys);
       return months.reduce((acc, month) => {
         const revenueKey = `${month} REVENUE`;
         const spendKey = `${month} ADVT SPEND`;
         const monthShareKey = `${month} % of Revenue (Spend)`;
         let shareKey = monthShareKey;
-        if (headerSet.has(monthShareKey)) {
+        if (columnSet.has(monthShareKey)) {
           shareKey = monthShareKey;
-        } else if (headerSet.has('% of Revenue (Spend)')) {
+        } else if (columnSet.has('% of Revenue (Spend)')) {
           shareKey = '% of Revenue (Spend)';
         }
         acc[month] = { revenue: revenueKey, spend: spendKey, share: shareKey };
@@ -1010,9 +1010,14 @@
       const response = await fetch(dataUrl, { cache: 'no-store' });
       const payload = await response.json();
       state.headers = Object.values(payload.headers);
-      const months = extractAvailableMonths(state.headers, yearSuffix);
+      const columnKeys = new Set(state.headers);
+      (payload.rows || []).forEach((row) => {
+        Object.keys(row).forEach((key) => columnKeys.add(key));
+      });
+      const availableColumns = [...columnKeys];
+      const months = extractAvailableMonths(availableColumns, yearSuffix);
       monthOptions = buildMonthOptions(months);
-      monthColumnKeyMap = buildMonthColumnKeyMap(state.headers, months);
+      monthColumnKeyMap = buildMonthColumnKeyMap(availableColumns, months);
       monthRegex = months.length
         ? new RegExp(`^(${months.map((month) => month.replace('-', '\\-')).join('|')}) `)
         : /$^/;
@@ -1285,9 +1290,7 @@
         ? parsed.filter((month) => monthOptions.some((option) => option.value === month))
         : [];
       const availableMonths = monthOptions.filter((option) => option.value !== 'ALL').map((option) => option.value);
-      const defaultMonths = validMonths.length
-        ? validMonths
-        : (availableMonths.length === 1 ? [availableMonths[0]] : ['ALL']);
+      const defaultMonths = validMonths.length ? validMonths : ['ALL'];
       state.selectedMonths = defaultMonths.includes('ALL') ? ['ALL'] : defaultMonths;
       monthOptions.forEach((option) => {
         const wrapper = document.createElement('label');
