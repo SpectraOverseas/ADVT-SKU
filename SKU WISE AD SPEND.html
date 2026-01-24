@@ -390,6 +390,11 @@
       display: none;
     }
 
+    .year-selection.is-hidden {
+      display: none;
+      visibility: hidden;
+    }
+
     .year-selection {
       position: fixed;
       inset: 0;
@@ -963,13 +968,22 @@
     const showYearSelection = () => {
       selectedYear = null;
       yearSelection.classList.remove('is-hidden');
+      yearSelection.style.display = 'flex';
+      yearSelection.style.visibility = 'visible';
+      yearSelection.setAttribute('aria-hidden', 'false');
       dashboardApp.classList.add('is-hidden');
+    };
+
+    const hideYearSelection = () => {
+      yearSelection.classList.add('is-hidden');
+      yearSelection.style.display = 'none';
+      yearSelection.style.visibility = 'hidden';
+      yearSelection.setAttribute('aria-hidden', 'true');
     };
 
     const loadDashboardForYear = (year) => {
       applyYearConfig(year);
       resetDashboardState();
-      yearSelection.classList.add('is-hidden');
       dashboardApp.classList.remove('is-hidden');
       loadData();
     };
@@ -1627,8 +1641,16 @@
 
     setView('table');
 
-    year2025Button.addEventListener('click', () => loadDashboardForYear(2025));
-    year2026Button.addEventListener('click', () => loadDashboardForYear(2026));
+    year2025Button.addEventListener('click', () => {
+      const year = 2025;
+      hideYearSelection();
+      loadDashboardForYear(year);
+    });
+    year2026Button.addEventListener('click', () => {
+      const year = 2026;
+      hideYearSelection();
+      loadDashboardForYear(year);
+    });
 
     showYearSelection();
   </script>
